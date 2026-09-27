@@ -21,7 +21,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-HSC 向 MEP、GMP、MDP 的命运。拟时间在 Harmony 上计算；图上的线是 UMAP 里平滑后的曲线，白圈为 HSC，箭头沿曲线指向终点。
+HSC 向红系（MEP）、粒系（GMP）、单核（MDP）三条命运。拟时间在 Harmony 空间计算；UMAP 上的线连接各亚型中心，箭头贴在线的末端。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -66,7 +66,7 @@ traj_col <- annot_sub_col[traj_levels]
 
 ### 1. Subset HSPC
 <!-- step-note -->
-只留 HSC、MEP、GMP、MDP。GMP 也会出现在 08 的粒系轴上，那是下游，不是把两条轴画成一条。
+只保留 HSC、MEP、GMP、MDP。GMP 在 08 还会作为粒系轴的起点；这里问的是 HSC 先分到哪一支。
 
 ```{r message=FALSE, warning=FALSE}
 test_genes <- qs_read("data/rdata/test_genes.qs2", nthreads = 10)
@@ -93,7 +93,7 @@ seurat_object[["RNA"]]$scale.data <- NULL
 
 ### 2. Normalize, HVG, PCA, Harmony, UMAP
 <!-- step-note -->
-细胞集合变了，重做降维。UMAP 用 20 个 Harmony 维，和 06 一致。不重新聚类。
+子集上重新高变基因、PCA、Harmony 和 UMAP。亚型名字沿用 06，不再聚类。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
@@ -128,7 +128,7 @@ seurat_object <- RunUMAP(
 
 ### 3. Annotation UMAP
 <!-- step-note -->
-HSC 应靠近中心或一端，MEP / GMP / MDP 往外分。若三类完全叠在一起，后面的分叉不可信。
+核对 HSC 与三个下游亚型是否分开。分叉要画得住，三类终点不能完全叠在一起。
 
 ```{r message=FALSE, warning=FALSE}
 plot_umap_short(
@@ -175,7 +175,7 @@ ggsave(file.path(res_path, "01_umap_sample_group.pdf"), width = 14, height = 7, 
 
 ### 4. CytoTRACE2
 <!-- step-note -->
-HSC 应偏高，成熟方向（尤其 MEP 偏红系）应偏低。两组密度差可能只是 GMP 占比不同。
+高分更接近未成熟。HSC 应偏高，MEP / GMP / MDP 应偏低。组间密度差也可能只是组成不同。
 
 ```{r message=FALSE, warning=FALSE}
 cyto_qs2 <- file.path(obj_path, "cytotrace_hspc.qs2")
@@ -244,7 +244,7 @@ print(cyto_test)
 
 ### 5. Slingshot
 <!-- step-note -->
-拟时间在 Harmony 上计算，起点 HSC，终点 MEP、GMP、MDP。图上的线是 UMAP 里单独拟合、再平滑过的曲线；白圈是 HSC，箭头贴着线指向终点。
+起点固定为 HSC，三条终点为 MEP、GMP、MDP。拟时间在 Harmony 上算；图上的线走亚型中心，箭头是曲线最后一段的切向。组间看每例细胞落在哪一支的比例。
 
 ```{r message=FALSE, warning=FALSE}
 sling <- list()
@@ -272,20 +272,6 @@ if (!all(lin_ok)) {
   )
   stop("Slingshot lineages do not all start at HSC: ", paste(lin_txt, collapse = "; "))
 }
-# UMAP curves for display only: same start/end, fewer knots, then spline-smooth.
-sling$slingshot_umap <- getLineages(
-  sling$dimred,
-  sling$clustering,
-  start.clus = "HSC",
-  end.clus = c("MEP", "GMP", "MDP")
-)
-sling$slingshot_umap <- getCurves(
-  sling$slingshot_umap,
-  approx_points = 40,
-  stretch = 0,
-  shrink = TRUE
-)
-sling$curves <- slingCurves(sling$slingshot_umap, as.df = TRUE)
 sling$pseudotime <- as.data.frame(slingPseudotime(sling$slingshot_fit))
 sling$slingshot <- sling$slingshot_fit
 stopifnot(identical(rownames(sling$dimred_fit), colnames(seurat_object)))
@@ -297,52 +283,73 @@ for (ln in pt_cols) {
   seurat_object[[paste0("sling_", ln)]] <- sling$pseudotime[[ln]]
 }
 
-curve_xy <- sling$curves
-xy <- intersect(colnames(curve_xy), c("umap_1", "UMAP_1", "umap_2", "UMAP_2"))
-if (length(xy) < 2) {
-  xy <- setdiff(
-    names(curve_xy)[vapply(curve_xy, is.numeric, logical(1))],
-    c("Order", "Lineage")
-  )[1:2]
-}
-stopifnot(length(xy) >= 2)
-curve_xy <- curve_xy |>
-  dplyr::rename(x = dplyr::all_of(xy[1]), y = dplyr::all_of(xy[2])) |>
-  dplyr::arrange(.data$Lineage, .data$Order)
-
-smooth_one <- function(d, n_pts = 50, spar = 0.75) {
-  o <- seq(min(d$Order), max(d$Order), length.out = n_pts)
-  sx <- stats::smooth.spline(d$Order, d$x, spar = spar)
-  sy <- stats::smooth.spline(d$Order, d$y, spar = spar)
+path_from_centroids <- function(xy, n = 120) {
+  xy <- as.matrix(xy)
+  stopifnot(nrow(xy) >= 2, ncol(xy) == 2)
+  if (nrow(xy) == 2) {
+    t <- seq(0, 1, length.out = n)
+    return(data.frame(
+      x = (1 - t) * xy[1, 1] + t * xy[2, 1],
+      y = (1 - t) * xy[1, 2] + t * xy[2, 2]
+    ))
+  }
+  grDevices::pdf(NULL)
+  sp <- graphics::xspline(
+    xy[, 1], xy[, 2],
+    shape = -0.5,
+    open = TRUE,
+    draw = FALSE,
+    repEnds = TRUE
+  )
+  grDevices::dev.off()
+  dx <- diff(sp$x)
+  dy <- diff(sp$y)
+  s <- c(0, cumsum(sqrt(dx * dx + dy * dy)))
+  s <- s / max(s)
+  t <- seq(0, 1, length.out = n)
   data.frame(
-    Order = o,
-    x = as.numeric(stats::predict(sx, o)$y),
-    y = as.numeric(stats::predict(sy, o)$y)
+    x = stats::approx(s, sp$x, xout = t)$y,
+    y = stats::approx(s, sp$y, xout = t)$y
   )
 }
-curve_sm <- curve_xy |>
-  dplyr::group_by(Lineage) |>
-  dplyr::group_modify(~ smooth_one(.x)) |>
-  dplyr::ungroup()
-n_arr <- 8L
-arrow_df <- curve_sm |>
-  dplyr::group_by(Lineage) |>
-  dplyr::filter(dplyr::n() >= n_arr) |>
-  dplyr::slice((dplyr::n() - n_arr + 1):dplyr::n()) |>
-  dplyr::summarise(
-    x = dplyr::first(.data$x),
-    y = dplyr::first(.data$y),
-    xend = dplyr::last(.data$x),
-    yend = dplyr::last(.data$y),
-    .groups = "drop"
-  )
+
+umap_cent <- as.data.frame(sling$dimred)
+colnames(umap_cent) <- c("x", "y")
+umap_cent$clus <- as.character(sling$clustering)
+cent_df <- umap_cent |>
+  dplyr::group_by(clus) |>
+  dplyr::summarise(x = mean(.data$x), y = mean(.data$y), .groups = "drop")
+
+lin_map <- slingLineages(sling$slingshot_fit)
+curve_sm <- purrr::imap_dfr(lin_map, function(clus, nm) {
+  cc <- cent_df[match(clus, cent_df$clus), c("x", "y")]
+  d <- path_from_centroids(cc)
+  d$Lineage <- nm
+  d$Order <- seq_len(nrow(d))
+  d$end_lab <- tail(clus, 1)
+  d
+})
 lab_df <- curve_sm |>
   dplyr::group_by(Lineage) |>
-  dplyr::slice_max(order_by = .data$Order, n = 1, with_ties = FALSE) |>
-  dplyr::ungroup() |>
-  dplyr::mutate(lab = paste0("L", Lineage))
-hsc_xy <- sling$dimred[as.character(sling$clustering) == "HSC", , drop = FALSE]
-start_df <- data.frame(x = mean(hsc_xy[, 1]), y = mean(hsc_xy[, 2]))
+  dplyr::slice_max(order_by = .data$Order, n = 2, with_ties = FALSE) |>
+  dplyr::arrange(.data$Order) |>
+  dplyr::summarise(
+    x0 = dplyr::first(.data$x),
+    y0 = dplyr::first(.data$y),
+    x = dplyr::last(.data$x),
+    y = dplyr::last(.data$y),
+    lab = dplyr::last(.data$end_lab),
+    .groups = "drop"
+  ) |>
+  dplyr::mutate(
+    dx = .data$x - .data$x0,
+    dy = .data$y - .data$y0,
+    x = .data$x + 8 * .data$dx,
+    y = .data$y + 8 * .data$dy
+  )
+start_df <- cent_df |>
+  dplyr::filter(.data$clus == "HSC") |>
+  dplyr::select(x, y)
 
 plot_df <- as.data.frame(sling$dimred) |>
   mutate(annot_sub = sling$clustering)
@@ -355,16 +362,9 @@ p_sling <- ggplot(plot_df, aes(.data[[x_umap]], .data[[y_umap]])) +
     data = curve_sm,
     aes(x = x, y = y, group = Lineage),
     linewidth = 1.15,
-    lineend = "round",
-    linejoin = "round"
-  ) +
-  geom_segment(
-    data = arrow_df,
-    aes(x = x, y = y, xend = xend, yend = yend),
-    inherit.aes = FALSE,
-    linewidth = 1.15,
     lineend = "butt",
-    arrow = arrow(type = "closed", length = unit(0.38, "cm"))
+    linejoin = "round",
+    arrow = arrow(type = "closed", length = unit(0.28, "cm"), angle = 20)
   ) +
   geom_point(
     data = start_df, aes(x = x, y = y),
@@ -378,7 +378,7 @@ p_sling <- ggplot(plot_df, aes(.data[[x_umap]], .data[[y_umap]])) +
   ) +
   geom_text(
     data = lab_df, aes(x = x, y = y, label = lab),
-    size = 4.5, fontface = "bold", vjust = 1.3
+    size = 4.5, fontface = "bold"
   ) +
   scale_color_manual(values = traj_col) +
   theme_classic() +

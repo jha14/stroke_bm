@@ -393,7 +393,7 @@ gc()
 
 ### (Skipped) Check Sample Sex
 <!-- step-note -->
-临床已有性别，这段没跑。
+性别来自临床记录，不从表达推断。
 
 ```{r message=FALSE, warning=FALSE}
 # suppressMessages(require(biomaRt))

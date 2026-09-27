@@ -57,7 +57,7 @@ traj_levels <- c(
 
 ### 1. 读 08 拟时间和 09–11 缓存
 <!-- step-note -->
-不重跑 mlm / ulm / CytoSig。轨迹对象来自 08；分数来自 `data/rdata/activity/`。
+读入 08 的粒系拟时间和 09–11 的活性分数，按细胞 barcode 对齐。
 
 ```{r message=FALSE, warning=FALSE}
 traj <- qs_read(file.path(traj_path, "seurat_object_neut_traj.qs2"), nthreads = 10)
@@ -167,7 +167,7 @@ p_box_pt
 
 ### 3. PROGENy 沿拟时间
 <!-- step-note -->
-平滑曲线是细胞级 loess（随机抽 4000 个细胞看形状：平行平移 vs 交叉）。组间结论看下面按拟时间分段的样本中位数。
+曲线看活性随拟时间的形状（平移还是交叉）。组间看按拟时间分段后的每例中位数。
 
 ```{r message=FALSE, warning=FALSE}
 pw_rho <- pt_assoc(dat_pw, "pt", pw)
@@ -200,7 +200,7 @@ print(dplyr::filter(bin_pw, .data$p < 0.05))
 
 ### 4. 转录因子沿拟时间
 <!-- step-note -->
-仍只用和发育相关的 top TF（和 10 同一套逻辑），避免一千个 TF 一起画。
+沿拟时间画与 10 相同的 30 个发育相关 TF。
 
 ```{r message=FALSE, warning=FALSE}
 tf_csv <- "results/neut_tf/01_tf_stage.csv"
@@ -248,7 +248,7 @@ print(dplyr::filter(bin_tf, .data$p < 0.05))
 
 ### 5. CytoSig 沿拟时间
 <!-- step-note -->
-先按和拟时间的相关选出变化最大的细胞因子，再看两组曲线。Lollipop 仍以 11 的样本级总差为准；这里看差发生在轴的哪一段。
+选出随拟时间变化最大的细胞因子，看差出现在轴的哪一段。总体组间差以 11 为准。
 
 ```{r message=FALSE, warning=FALSE}
 ck_rho <- pt_assoc(dat_cs, "pt", ck)

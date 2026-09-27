@@ -84,9 +84,9 @@ print(table(cell_meta$annot_sub[cell_meta$annot_sub %in% traj_levels],
 
 ### 1. PROGENy mlm
 <!-- step-note -->
-每个细胞、每条通路算一个活性分数。正分更活跃。这是 RNA 推断，不是磷酸化。
+每个细胞、每条通路一个活性分数。正分更活跃。这是 RNA 推断，不是磷酸化。
 
-`get_progeny(top = 500)`，去掉 Androgen / Estrogen 后再 mlm（多元回归，不能事后删列）。旧缓存若仍含这两条通路会重跑。
+PROGENy 取 top 500 靶基因，去掉 Androgen / Estrogen 后做多元回归（mlm）。正分表示该通路靶基因整体上调。
 
 ```{r message=FALSE, warning=FALSE}
 pw_drop <- c("Androgen", "Estrogen")
@@ -126,7 +126,7 @@ print(pw)
 <!-- step-note -->
 各条通路在不同大类里相对高低。颜色是标准化后的相对值，用来横着比较通路，不是蛋白量。
 
-先看「哪类细胞哪条通路高」，不是组间。Kruskal 只说明大类之间有差别（几乎一定有）。每个通路 Kruskal–Wallis（`annot_main`，原始 score）。热图：每个通路跨细胞 z-score 后再按大类取均值。
+热图比较各大类的相对高低：每条通路先在细胞间 z-score，再按大类取均值。
 
 ```{r message=FALSE, warning=FALSE}
 kw_main <- kruskal_by_type(dat, pw, "annot_main")
@@ -167,7 +167,7 @@ p_box
 <!-- step-note -->
 每个大类里 ACI 减 CTRL。红 = ACI 更高。组间仍叠着平台差异。
 
-患者级星号才是组间。直方图：同一亚型里蓝/红分布是否错开；错开但患者级不显著 = 只是细胞很多。细胞级 Wilcoxon + BH；样本中位数用原始 p。
+直方图看同一亚型里两组分布是否错开；组间结论看每例一个点。细胞很多时分布错开不必等于每例病人都变了。
 
 ```{r message=FALSE, warning=FALSE}
 cell_main <- cell_group_tests(dat, pw, strata_col = "annot_main") |>
@@ -297,7 +297,7 @@ p_hist_med_main
 <!-- step-note -->
 从 GMP 到成熟粒，通路是否随发育升降。
 
-从左 GMP 到右成熟粒。某通路沿阶段变红/变蓝 = 发育程序，不一定是脑梗造成的。脑梗效应看下一节组间。复用全细胞 mlm。阶段秩 Spearman + Kruskal 用原始 score。热图在谱系细胞内 z-score 再取均值。
+从左 GMP 到右成熟粒。颜色沿阶段变化反映发育程序；脑梗相关的组间差在下一节。
 
 ```{r message=FALSE, warning=FALSE}
 dat_neut <- dat |>
@@ -339,9 +339,7 @@ p_box_n
 
 ### 5. 中性粒谱系：CTRL vs ACI
 <!-- step-note -->
-中性粒这条路上两组差在哪。请看每个样本一个点的图，不要看细胞级星号。
-
-谱系合计 + 每个 `annot_sub`。样本级原始 p。
+粒系上 ACI 与 CTRL 的通路差。组间看每例中位数。
 
 ```{r message=FALSE, warning=FALSE}
 pw_cell_all <- add_fdr(cell_group_tests(dat_neut, pw))

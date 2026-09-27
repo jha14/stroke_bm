@@ -375,9 +375,9 @@ if (file.exists(pred_file)) {
 
 ### 5. Round 2 (optional)
 <!-- step-note -->
-去掉低质量或混合簇后再算一遍。如果没有要丢的，可以很快略过。
+去掉低质量或混合簇后重新降维。
 
-看完 cluster / QC / marker 后填写要丢掉的 `harmony_clusters_4` ID。空向量则跳过。丢掉后会从 counts 再 Normalize → HVG → PCA → Harmony → cluster。
+按 QC 和 marker 去掉低质量或混合簇，再从 counts 重新 Normalize、高变基因、PCA、Harmony 和聚类。
 
 ```{r message=FALSE, warning=FALSE}
 drop_clusters <- c(6, 9, 19, 21, 22, 25, 26, 31, 32, 33)
@@ -453,7 +453,7 @@ if (length(drop_clusters) == 0) {
 <!-- step-note -->
 检查清理后 UMAP 是否还剩明显的垃圾团或双细胞团。
 
-确认低质量 / 污染 cluster 是否已经去掉。还不干净就填下一节的 `drop_clusters_r3`。
+确认清理后的 UMAP 不再有明显的低质量或双细胞团。
 
 ```{r message=FALSE, warning=FALSE}
 plot_grid(
@@ -536,7 +536,7 @@ ggsave(
 )
 ```
 
-还不干净时填写 **当前** `harmony_clusters_4` 的 ID。只 subset，下一节再重新跑流程。
+若仍有低质量簇，记下当前高分辨率 ID，下一节 subset 后重跑降维。
 
 ```{r message=FALSE, warning=FALSE}
 drop_clusters_r3 <- c()
@@ -563,7 +563,7 @@ if (length(drop_clusters_r3) == 0) {
 <!-- step-note -->
 用清理后的细胞重新聚类，供最后命名。
 
-清理确认后再 Normalize → HVG → PCA → Harmony → UMAP（reduction 名 `umap`），分辨率 0.1 / 0.2 / 0.5 / 1。
+用清理后的细胞做最终降维，并在 0.1 / 0.2 / 0.5 / 1 分辨率下聚类，供命名。
 
 ```{r message=FALSE, warning=FALSE}
 Idents(seurat_object) <- "sample"
@@ -750,7 +750,7 @@ ggsave(file.path(res_path, "05_markers_contam.pdf"), width = 18, height = 15)
 <!-- step-note -->
 最终亚型名字。后面组成和通路分析用这里的标签。
 
-`annot_cluster` 和 `cluster_map` 必须同一套分辨率。看过 `04_recluster` 和上面 FeaturePlot 后再改。
+命名用的分辨率须与 cluster 对照图一致。
 
 ```{r message=FALSE, warning=FALSE}
 annot_cluster <- "harmony_clusters_0.1"

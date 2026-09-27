@@ -2425,7 +2425,7 @@ margin-bottom: 6px !important;
 <section id="normalize-hvg-scale-pca-harmony" class="level3">
 <h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca-harmony">2. Normalize, HVG, Scale, PCA, Harmony</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">集合变了，重做降维和整合，不重新聚类，亚型沿用 06。</p>
 
-<p>和 05 / 06 一样：HVG 3000；PCA 去掉 MT / 核糖体 / HSP / DNAJ / HIST / ZFP36 以及 IG / TR；<code>ScaleData</code> 不 regress；Harmony 按 <code>sample</code>。</p>
+<p>子集上重新高变基因、PCA、Harmony 和 UMAP。亚型沿用 06。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(seurat_object, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(</span>
@@ -2645,7 +2645,7 @@ margin-bottom: 6px !important;
 <h3 class="anchored" data-anchor-id="diffusion-map">5. Diffusion map</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">另一种摊平方法，用来看是不是拉成一条轴，而不是好几团。</p>
 
 <p>细胞水平 Wilcoxon 会被组成分牵着走（ACI 成熟中性粒更多）。样本水平是每个样本的中位数再比组；亚型内比较更干净。样本至少 <code>min_cells_sample</code> 个细胞才进样本水平。</p>
-<p>跑完写入 <code>data/rdata/trajectory/cytotrace_neut.qs2</code>。下次细胞数和 barcode 与当前对象一致就跳过 <code>cytotrace2()</code>。</p>
+<p>高分更接近未成熟。组间比较用每例中位数。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>cyto_qs2 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(obj_path, <span class="st">&quot;cytotrace_neut.qs2&quot;</span>)</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>cyto_cache <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
@@ -3092,9 +3092,9 @@ Vcells 200082174 1526.6  577636070 4407.1 737742890 5628.6</code></pre>
 </div>
 </section>
 <section id="slingshot" class="level3">
-<h3 class="anchored" data-anchor-id="slingshot">7. Slingshot</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">在图上画拟时间曲线。拟时间是转录组距离，不是小时。目前没有接到 09–11。</p>
+<h3 class="anchored" data-anchor-id="slingshot">7. Slingshot</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">在 UMAP 上从 GMP 出发画粒系拟时间。拟时间是转录组距离，不是小时。与通路 / TF / 细胞因子的对齐在 12。</p>
 
-<p>在官方 UMAP（<code>umap</code>，dims 1:<code>n_dims</code>）上推断，起点 <strong>GMP</strong>。<code>stretch = 0</code> 同参考脚本。不做 tradeSeq / 伪时间组间密度。</p>
+<p>起点为 GMP。拟时间供 12 与活性分数对齐。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>sling <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>sling<span class="sc">$</span>dimred <span class="ot">&lt;-</span> <span class="fu">Embeddings</span>(seurat_object, <span class="st">&quot;umap&quot;</span>)[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>

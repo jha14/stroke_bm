@@ -86,7 +86,7 @@ print(table(cell_meta$annot_main, cell_meta$group))
 <!-- step-note -->
 给每个细胞打一套细胞因子响应分数。推断「像被什么刺激过」，不是测到的浓度。
 
-`X` = signature.centroid，`Y` = log-normalized 表达。活性取 ridge z-score。barcode 与 `cytosig_all.qs2` 一致则跳过。
+用 CytoSig 签名对 log 表达做 ridge，得到每个细胞的细胞因子响应分数。
 
 ```{r message=FALSE, warning=FALSE}
 cs_qs2 <- file.path(obj_path, "cytosig_all.qs2")
@@ -143,7 +143,7 @@ print(ck)
 <!-- step-note -->
 哪些大类看起来对哪些细胞因子更敏感。颜色是相对高低。
 
-每个细胞因子跨全部细胞 z-score，再按 `annot_main` 取均值。
+热图：每个细胞因子先在细胞间 z-score，再按大类取均值。
 
 ```{r message=FALSE, warning=FALSE}
 mean_main <- mean_by_scaled(dat, ck, "annot_main")
@@ -227,7 +227,7 @@ p_d_c
 <!-- step-note -->
 同一套细胞因子在 GMP / Pre-Neut / 成熟粒上的相对高低。
 
-复用全细胞 ridge，取 GMP + Pre-Neut + Neut。
+同一套分数，只看 GMP 到成熟粒。
 
 ```{r message=FALSE, warning=FALSE}
 dat_neut <- dat |>
@@ -270,7 +270,7 @@ p_hm_sub_g
 <!-- step-note -->
 中性粒谱系总体：每种细胞因子一个点，高度是样本级 ACI−CTRL。红显著升高，蓝显著降低，灰不显著。
 
-**主图。** 红点 = ACI 患者级显著更高的细胞因子响应。先看 IFN / 集落刺激因子是否在红侧，再对照亚型热图定位阶段。谱系细胞合计，样本级原始 p，细胞级 BH 作对照。按 ACI−CTRL 从高到低。
+每个点一种细胞因子，高度是样本级 ACI 减 CTRL。先看 IFN 和集落刺激因子落在哪一侧，再对照亚型图看信号停在哪一段。
 
 ```{r message=FALSE, warning=FALSE}
 ck_cell_lineage <- add_fdr(cell_group_tests(dat_neut, ck))
@@ -306,7 +306,7 @@ p_lolli_c
 <!-- step-note -->
 拆到亚型看信号停在哪一段。同样看样本级。
 
-看信号是停在前体还是成熟粒。患者级为主。
+拆到亚型，看信号在前体还是成熟粒。组间仍看每例一个点。
 
 ```{r message=FALSE, warning=FALSE}
 ck_cell_sub <- add_fdr(cell_group_tests(dat_neut, ck, strata_col = "annot_sub")) |>

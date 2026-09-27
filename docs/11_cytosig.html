@@ -2313,7 +2313,7 @@ margin-bottom: 6px !important;
 <section id="cytosig-ridge全细胞" class="level3">
 <h3 class="anchored" data-anchor-id="cytosig-ridge全细胞">1. CytoSig ridge（全细胞）</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">给每个细胞打一套细胞因子响应分数。推断「像被什么刺激过」，不是测到的浓度。</p>
 
-<p><code>X</code> = signature.centroid，<code>Y</code> = log-normalized 表达。活性取 ridge z-score。barcode 与 <code>cytosig_all.qs2</code> 一致则跳过。</p>
+<p>用 CytoSig 签名对 log 表达做 ridge，得到每个细胞的细胞因子响应分数。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>cs_qs2 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(obj_path, <span class="st">&quot;cytosig_all.qs2&quot;</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">cache_ok</span>(cs_qs2, <span class="fu">colnames</span>(seurat_object))) {</span>
@@ -2381,7 +2381,7 @@ margin-bottom: 6px !important;
 <section id="细胞大类活性热图" class="level3">
 <h3 class="anchored" data-anchor-id="细胞大类活性热图">2. 细胞大类：活性热图</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">哪些大类看起来对哪些细胞因子更敏感。颜色是相对高低。</p>
 
-<p>每个细胞因子跨全部细胞 z-score，再按 <code>annot_main</code> 取均值。</p>
+<p>热图：每个细胞因子先在细胞间 z-score，再按大类取均值。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>mean_main <span class="ot">&lt;-</span> <span class="fu">mean_by_scaled</span>(dat, ck, <span class="st">&quot;annot_main&quot;</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>p_hm_main <span class="ot">&lt;-</span> <span class="fu">plot_heatmap_mean</span>(mean_main, ck, <span class="at">row_col =</span> <span class="st">&quot;annot_main&quot;</span>) <span class="sc">+</span></span>
@@ -2529,7 +2529,7 @@ margin-bottom: 6px !important;
 <section id="中性粒谱系亚型活性热图" class="level3">
 <h3 class="anchored" data-anchor-id="中性粒谱系亚型活性热图">4. 中性粒谱系：亚型活性热图</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">同一套细胞因子在 GMP / Pre-Neut / 成熟粒上的相对高低。</p>
 
-<p>复用全细胞 ridge，取 GMP + Pre-Neut + Neut。</p>
+<p>同一套分数，只看 GMP 到成熟粒。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>dat_neut <span class="ot">&lt;-</span> dat <span class="sc">|&gt;</span></span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(<span class="fu">as.character</span>(.data<span class="sc">$</span>annot_sub) <span class="sc">%in%</span> traj_levels) <span class="sc">|&gt;</span></span>
@@ -2605,7 +2605,7 @@ margin-bottom: 6px !important;
 <section id="中性粒谱系总体lollipop" class="level3">
 <h3 class="anchored" data-anchor-id="中性粒谱系总体lollipop">5. 中性粒谱系总体：lollipop</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">中性粒谱系总体：每种细胞因子一个点，高度是样本级 ACI−CTRL。红显著升高，蓝显著降低，灰不显著。</p>
 
-<p><strong>主图。</strong> 红点 = ACI 患者级显著更高的细胞因子响应。先看 IFN / 集落刺激因子是否在红侧，再对照亚型热图定位阶段。谱系细胞合计，样本级原始 p，细胞级 BH 作对照。按 ACI−CTRL 从高到低。</p>
+<p>每个点一种细胞因子，高度是样本级 ACI 减 CTRL。先看 IFN 和集落刺激因子落在哪一侧，再对照亚型图看信号停在哪一段。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>ck_cell_lineage <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(<span class="fu">cell_group_tests</span>(dat_neut, ck))</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>ck_med_lineage <span class="ot">&lt;-</span> <span class="fu">sample_medians</span>(dat_neut, ck)</span>
@@ -2668,7 +2668,7 @@ margin-bottom: 6px !important;
 <section id="中性粒亚型ctrl-vs-aci" class="level3">
 <h3 class="anchored" data-anchor-id="中性粒亚型ctrl-vs-aci">6. 中性粒亚型：CTRL vs ACI</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">拆到亚型看信号停在哪一段。同样看样本级。</p>
 
-<p>看信号是停在前体还是成熟粒。患者级为主。</p>
+<p>拆到亚型，看信号在前体还是成熟粒。组间仍看每例一个点。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>ck_cell_sub <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(<span class="fu">cell_group_tests</span>(dat_neut, ck, <span class="at">strata_col =</span> <span class="st">&quot;annot_sub&quot;</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">annot_sub =</span> <span class="fu">factor</span>(.data<span class="sc">$</span>stratum, <span class="at">levels =</span> traj_levels))</span>

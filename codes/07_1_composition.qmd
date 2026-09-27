@@ -72,7 +72,7 @@ print(table(cell_meta$annot_main, cell_meta$group))
 <!-- step-note -->
 堆叠图和箱线：每个点是一例里该类占全部细胞的百分之几。
 
-每例一个占比。看中性粒 / Pre-Neut / HSPC（含 GMP）在 ACI 是否整体上移。点少（11 个），重叠多不代表没趋势，去 07.2 看模型。
+每个点是一例里该类占全部细胞的比例。先看中性粒、Pre-Neut 和 HSPC 是否整体上移；组成推断以 07.2 的模型为准。
 
 ```{r message=FALSE, warning=FALSE}
 make_prop <- function(meta, cell_col) {
@@ -169,7 +169,7 @@ ggsave(
 <!-- step-note -->
 用 6 vs 5 个样本做 Wilcoxon，只是敏感性分析。主模型在 07.2。
 
-每类细胞单独做 6 vs 5 的 Wilcoxon。样本少，不显著不等于没生物学差异。每类型独立检验，**不考虑成分约束**，只作对照。主结果看 scCODA / tascCODA。
+6 vs 5 的 Wilcoxon 不考虑「占比加总为 100%」，只作对照。主结果看 07.2。
 
 ```{r message=FALSE, warning=FALSE}
 wilcox_props <- function(prop_df) {
@@ -207,15 +207,13 @@ wilcox_sub
 <!-- step-note -->
 把计数表交给下一篇 scCODA。
 
-`data/rdata/composition/cell_meta.csv` 给 `07_2_sccoda.ipynb`。该 notebook 用 pertpy：`annot_main` 做 scCODA，`annot_main` + `annot_sub` 树做 tascCODA。
+把每例各类细胞计数交给 scCODA / tascCODA。
 
 ### 4. miloR
 <!-- step-note -->
 不按我们起的名字，而按转录组邻居圈一块细胞再比丰度。方向应和占比大致同向，细节可以不完全一样。
 
-邻域丰度：正 logFC（红）= ACI 更富集。SpatialFDR < 0.1 常当作「这片邻居可信」。应和占比图方向大致一致。
-
-在 Harmony 邻域上检验 ACI vs CTRL。不依赖离散 cluster；邻域再用 `annot_main` / `annot_sub` 注释。
+不依赖离散命名，按转录组邻居比较丰度。红 = ACI 更富集；方向应与占比图大致一致。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(miloR)

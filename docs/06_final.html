@@ -2390,7 +2390,7 @@ CD56bright NK    CD56dim NK       CD8 CTL       CD8 NKT       CD8 Tem
 <section id="subset-first-annot-object" class="level3">
 <h3 class="anchored" data-anchor-id="subset-first-annot-object">2. Subset first-annot object</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">只留下通过亚型注释的细胞。</p>
 
-<p><code>first_annot</code> 的粗标保存在 <code>annot</code>，不覆盖。05 丢掉的细胞不会进最终对象。</p>
+<p>只保留完成亚型命名的细胞。04 的粗标留在 <code>annot</code> 作对照。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>test_genes <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">&quot;data/rdata/test_genes.qs2&quot;</span>, <span class="at">nthreads =</span> <span class="dv">10</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(</span>
@@ -2487,7 +2487,7 @@ first          HSPC     B Plasma     T    NK Mono/DC   pDC Pre-Neut  Neut   Ery
 </div>
 </section>
 <section id="normalize-hvg-scale-pca" class="level3">
-<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">3. Normalize, HVG, Scale, PCA</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">细胞集合变了，必须重做高变基因和 PCA。</p>
+<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">3. Normalize, HVG, Scale, PCA</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">合并后细胞集合变了，重新找高变基因并做 PCA。</p>
 
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(seurat_object, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
@@ -2848,7 +2848,7 @@ first          HSPC     B Plasma     T    NK Mono/DC   pDC Pre-Neut  Neut   Ery
 <section id="save" class="level3">
 <h3 class="anchored" data-anchor-id="save">7. Save</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">写出后面 07–11 都读的最终对象。</p>
 
-<p>后续分析读 <code>seurat_object_final.qs2</code>，用 <code>annot_main</code>（level-1）/ <code>annot_sub</code>（level-2）。官方 UMAP 是 <code>umap</code>（dims <code>n_dims</code>）。<code>annot</code> 和 <code>umap_first</code> 只作对照。</p>
+<p>写出 <code>seurat_object_final.qs2</code>：<code>annot_main</code> 为大类，<code>annot_sub</code> 为亚型。后面组成和状态分析都读这份。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Idents</span>(seurat_object) <span class="ot">&lt;-</span> <span class="st">&quot;annot_main&quot;</span></span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="fu">qs_save</span>(</span>

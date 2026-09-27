@@ -169,7 +169,7 @@ Layers(seurat_object)
 <!-- step-note -->
 集合变了，重做降维和整合，不重新聚类，亚型沿用 06。
 
-和 05 / 06 一样：HVG 3000；PCA 去掉 MT / 核糖体 / HSP / DNAJ / HIST / ZFP36 以及 IG / TR；`ScaleData` 不 regress；Harmony 按 `sample`。
+子集上重新高变基因、PCA、Harmony 和 UMAP。亚型沿用 06。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
@@ -326,17 +326,7 @@ ggsave(
 
 ### 4. CytoTRACE2
 <!-- step-note -->
-分数高更「早」、更不成熟。成熟粒应偏低。两组颜色叠在一起，看的是发育早晚，不是疾病标签。
-
-高分更像未成熟细胞。请同时看按亚型上色和按组别上色：若 ACI 只是「成熟粒更多」则平均潜能会下降，那是组成变化，不一定是同一种细胞变幼稚。
-
-### 5. Diffusion map
-<!-- step-note -->
-另一种摊平方法，用来看是不是拉成一条轴，而不是好几团。
-
-细胞水平 Wilcoxon 会被组成分牵着走（ACI 成熟中性粒更多）。样本水平是每个样本的中位数再比组；亚型内比较更干净。样本至少 `min_cells_sample` 个细胞才进样本水平。
-
-跑完写入 `data/rdata/trajectory/cytotrace_neut.qs2`。下次细胞数和 barcode 与当前对象一致就跳过 `cytotrace2()`。
+高分更接近未成熟，成熟粒应偏低。组间差可能来自组成（ACI 成熟粒更多），所以同时看亚型上色和每例中位数。
 
 ```{r message=FALSE, warning=FALSE}
 cyto_qs2 <- file.path(obj_path, "cytotrace_neut.qs2")
@@ -564,9 +554,7 @@ ggsave(
 
 ### 5. Diffusion map
 <!-- step-note -->
-另一种摊平方法，用来看是不是拉成一条轴，而不是好几团。
-
-Harmony 前 `n_dims` 维，destiny `DiffusionMap`。
+用扩散映射把粒系摊成轴，核对是一条发育带还是几团细胞。
 
 ```{r message=FALSE, warning=FALSE}
 set.seed(123)
@@ -651,9 +639,7 @@ ggsave(file.path(res_path, "05_phate_cytotrace.pdf"), width = 8, height = 7, dpi
 
 ### 7. Slingshot
 <!-- step-note -->
-在图上画拟时间曲线。拟时间是转录组距离，不是小时。目前没有接到 09–11。
-
-在官方 UMAP（`umap`，dims 1:`n_dims`）上推断，起点 **GMP**。`stretch = 0` 同参考脚本。不做 tradeSeq / 伪时间组间密度。
+在 UMAP 上从 GMP 出发画粒系拟时间。拟时间是转录组距离，不是小时。与通路 / TF / 细胞因子的对齐在 12。
 
 ```{r message=FALSE, warning=FALSE}
 sling <- list()

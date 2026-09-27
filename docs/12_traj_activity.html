@@ -2275,7 +2275,7 @@ margin-bottom: 6px !important;
 <section id="读-08-拟时间和-0911-缓存" class="level3">
 <h3 class="anchored" data-anchor-id="读-08-拟时间和-0911-缓存">1. 读 08 拟时间和 09–11 缓存</h3>
 <!-- step-note -->
-<p>不重跑 mlm / ulm / CytoSig。轨迹对象来自 08；分数来自 <code>data/rdata/activity/</code>。</p>
+<p>读入 08 的粒系拟时间和 09–11 的活性分数，按细胞 barcode 对齐。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>traj <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="fu">file.path</span>(traj_path, <span class="st">&quot;seurat_object_neut_traj.qs2&quot;</span>), <span class="at">nthreads =</span> <span class="dv">10</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>pt_raw <span class="ot">&lt;-</span> <span class="fu">pick_sling_pt</span>(traj[[]])</span>
@@ -2432,7 +2432,7 @@ margin-bottom: 6px !important;
 <section id="progeny-沿拟时间" class="level3">
 <h3 class="anchored" data-anchor-id="progeny-沿拟时间">3. PROGENy 沿拟时间</h3>
 <!-- step-note -->
-<p>平滑曲线是细胞级 loess（随机抽 4000 个细胞看形状：平行平移 vs 交叉）。组间结论看下面按拟时间分段的样本中位数。</p>
+<p>曲线看活性随拟时间的形状（平移还是交叉）。组间看按拟时间分段后的每例中位数。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>pw_rho <span class="ot">&lt;-</span> <span class="fu">pt_assoc</span>(dat_pw, <span class="st">&quot;pt&quot;</span>, pw)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(pw_rho, <span class="fu">file.path</span>(res_path, <span class="st">&quot;02_progeny_pt_spearman.csv&quot;</span>))</span>
@@ -2517,7 +2517,7 @@ margin-bottom: 6px !important;
 <section id="转录因子沿拟时间" class="level3">
 <h3 class="anchored" data-anchor-id="转录因子沿拟时间">4. 转录因子沿拟时间</h3>
 <!-- step-note -->
-<p>仍只用和发育相关的 top TF（和 10 同一套逻辑），避免一千个 TF 一起画。</p>
+<p>沿拟时间画与 10 相同的 30 个发育相关 TF。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>tf_csv <span class="ot">&lt;-</span> <span class="st">&quot;results/neut_tf/01_tf_stage.csv&quot;</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(tf_csv)) {</span>
@@ -2607,7 +2607,7 @@ margin-bottom: 6px !important;
 <section id="cytosig-沿拟时间" class="level3">
 <h3 class="anchored" data-anchor-id="cytosig-沿拟时间">5. CytoSig 沿拟时间</h3>
 <!-- step-note -->
-<p>先按和拟时间的相关选出变化最大的细胞因子，再看两组曲线。Lollipop 仍以 11 的样本级总差为准；这里看差发生在轴的哪一段。</p>
+<p>选出随拟时间变化最大的细胞因子，看差出现在轴的哪一段。总体组间差以 11 为准。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>ck_rho <span class="ot">&lt;-</span> <span class="fu">pt_assoc</span>(dat_cs, <span class="st">&quot;pt&quot;</span>, ck)</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(ck_rho, <span class="fu">file.path</span>(res_path, <span class="st">&quot;04_cytosig_pt_spearman.csv&quot;</span>))</span>

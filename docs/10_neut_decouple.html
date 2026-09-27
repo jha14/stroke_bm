@@ -2415,7 +2415,7 @@ margin-bottom: 6px !important;
 <h3 class="anchored" data-anchor-id="ctrl-vs-acitop-tf">3. CTRL vs ACI（top TF）</h3>
 <!-- step-note -->
 <p>这些 TF 在两组之间有没有差。看样本级点图。</p>
-<p>只对发育相关 top TF 做分组检验。样本级原始 p。</p>
+<p>组间比较这 30 个 TF。看每例一个点。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>tf_cell_all <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(<span class="fu">cell_group_tests</span>(dat_tf, tf_top))</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>tf_med_all <span class="ot">&lt;-</span> <span class="fu">sample_medians</span>(dat_tf, tf_top)</span>

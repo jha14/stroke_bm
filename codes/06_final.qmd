@@ -143,7 +143,7 @@ print(table(label_tbl$annot_sub, useNA = "ifany"))
 <!-- step-note -->
 只留下通过亚型注释的细胞。
 
-`first_annot` 的粗标保存在 `annot`，不覆盖。05 丢掉的细胞不会进最终对象。
+只保留完成亚型命名的细胞。04 的粗标留在 `annot` 作对照。
 
 ```{r message=FALSE, warning=FALSE}
 test_genes <- qs_read("data/rdata/test_genes.qs2", nthreads = 10)
@@ -198,7 +198,7 @@ Layers(seurat_object)
 
 ### 3. Normalize, HVG, Scale, PCA
 <!-- step-note -->
-细胞集合变了，必须重做高变基因和 PCA。
+合并后细胞集合变了，重新找高变基因并做 PCA。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
@@ -480,7 +480,7 @@ ggsave(
 <!-- step-note -->
 写出后面 07–11 都读的最终对象。
 
-后续分析读 `seurat_object_final.qs2`，用 `annot_main`（level-1）/ `annot_sub`（level-2）。官方 UMAP 是 `umap`（dims `n_dims`）。`annot` 和 `umap_first` 只作对照。
+写出 `seurat_object_final.qs2`：`annot_main` 为大类，`annot_sub` 为亚型。后面组成和状态分析都读这份。
 
 ```{r message=FALSE, warning=FALSE}
 Idents(seurat_object) <- "annot_main"
