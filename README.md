@@ -16,13 +16,26 @@ Source stays in `codes/`. Rendered HTML is copied to `docs/` for Pages. `data/` 
 
 | Path | Content |
 |------|---------|
-| `codes/00_qc.qmd` … `06_final.qmd` | QC → clustering → annotation → subtypes → merge |
-| `codes/03_celltypist.ipynb` | CellTypist |
-| `codes/07_composition.qmd` | Sample proportions, Wilcoxon, miloR |
-| `codes/07_sccoda.ipynb` | scCODA / tascCODA (conda `pertpy`) |
+| `codes/00_qc.qmd` | QC |
+| `codes/01_clustering.qmd` | Clustering |
+| `codes/02_marker_plot.qmd` | Marker plots |
+| `codes/03_1_prediction.qmd` | h5ad export for CellTypist |
+| `codes/03_2_celltypist.ipynb` | CellTypist |
+| `codes/04_annotation.qmd` | Level-1 annotation |
+| `codes/05_1_hspc.qmd` | HSPC |
+| `codes/05_2_b_plasma.qmd` | B / Plasma |
+| `codes/05_3_tnk.qmd` | T / NK |
+| `codes/05_4_myeloid.qmd` | Mono/DC / pDC |
+| `codes/05_5_neutrophil.qmd` | Pre-Neut / Neut |
+| `codes/05_6_erythrocyte.qmd` | Ery |
+| `codes/06_final.qmd` | Merge final object |
+| `codes/07_1_composition.qmd` | Sample proportions, Wilcoxon, miloR |
+| `codes/07_2_sccoda.ipynb` | scCODA / tascCODA (conda `pertpy`) |
 | `codes/08_neut_trajectory.qmd` | GMP + neutrophil CytoTRACE2, DM, PHATE, slingshot |
 | `codes/plot_colors.R` | Shared palettes |
 | `codes/functions.R` | Shared helpers |
+
+`05_*` numbering follows `annot_main_col` in `plot_colors.R`.
 
 ## Run
 

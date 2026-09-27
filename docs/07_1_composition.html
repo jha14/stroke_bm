@@ -2240,8 +2240,8 @@ ul, ol {
 margin-bottom: 6px !important;
 }
 </style>
-<p>样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 <code>07_sccoda.ipynb</code> 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
-<p>先跑本脚本，再在 conda <code>stroke_bm</code> 里跑 <code>codes/07_sccoda.ipynb</code>。</p>
+<p>样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 <code>07_2_sccoda.ipynb</code> 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
+<p>先跑本脚本，再在 conda <code>stroke_bm</code> 里跑 <code>codes/07_2_sccoda.ipynb</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, cowplot, SingleCellExperiment</span>
@@ -2486,7 +2486,7 @@ margin-bottom: 6px !important;
 </section>
 <section id="export-note" class="level3">
 <h3 class="anchored" data-anchor-id="export-note">3. Export note</h3>
-<p><code>data/rdata/composition/cell_meta.csv</code> 给 <code>07_sccoda.ipynb</code>。该 notebook 用 pertpy：<code>annot_main</code> 做 scCODA，<code>annot_main</code> + <code>annot_sub</code> 树做 tascCODA。</p>
+<p><code>data/rdata/composition/cell_meta.csv</code> 给 <code>07_2_sccoda.ipynb</code>。该 notebook 用 pertpy：<code>annot_main</code> 做 scCODA，<code>annot_main</code> + <code>annot_sub</code> 树做 tascCODA。</p>
 </section>
 <section id="milor" class="level3">
 <h3 class="anchored" data-anchor-id="milor">4. miloR</h3>

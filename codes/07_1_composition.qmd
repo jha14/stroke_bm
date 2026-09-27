@@ -23,9 +23,9 @@ ul, ol {
 </style>
 ```
 
-样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 `07_sccoda.ipynb` 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。`group` 以 **CTRL** 为对照。
+样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 `07_2_sccoda.ipynb` 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。`group` 以 **CTRL** 为对照。
 
-先跑本脚本，再在 conda `stroke_bm` 里跑 `codes/07_sccoda.ipynb`。
+先跑本脚本，再在 conda `stroke_bm` 里跑 `codes/07_2_sccoda.ipynb`。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -202,7 +202,7 @@ wilcox_sub
 
 ### 3. Export note
 
-`data/rdata/composition/cell_meta.csv` 给 `07_sccoda.ipynb`。该 notebook 用 pertpy：`annot_main` 做 scCODA，`annot_main` + `annot_sub` 树做 tascCODA。
+`data/rdata/composition/cell_meta.csv` 给 `07_2_sccoda.ipynb`。该 notebook 用 pertpy：`annot_main` 做 scCODA，`annot_main` + `annot_sub` 树做 tascCODA。
 
 ### 4. miloR
 
