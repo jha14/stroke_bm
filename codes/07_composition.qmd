@@ -1,0 +1,326 @@
+---
+title: "Cell composition"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 `07_sccoda.ipynb` 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。`group` 以 **CTRL** 为对照。
+
+先跑本脚本，再在 conda `stroke_bm` 里跑 `codes/07_sccoda.ipynb`。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(
+  Seurat, tidyverse, qs2, cowplot, SingleCellExperiment
+)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+source("codes/plot_colors.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/composition"
+tab_path <- "data/rdata/composition"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  old_res <- old_res[!grepl("^03_s?ccoda|^03_tasc", basename(old_res))]
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+if (!dir.exists(tab_path)) dir.create(tab_path, recursive = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+n_dims <- 20
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- qs_read("data/rdata/seurat_object_final.qs2", nthreads = 10)
+stopifnot(all(c("sample", "group", "annot_main", "annot_sub") %in%
+  colnames(seurat_object[[]])))
+seurat_object$group <- factor(seurat_object$group, levels = c("CTRL", "ACI"))
+cell_meta <- FetchData(
+  seurat_object,
+  vars = c("sample", "group", "annot_main", "annot_sub")
+) |>
+  rownames_to_column("barcode")
+sample_meta <- cell_meta |>
+  distinct(sample, group) |>
+  arrange(group, sample)
+print(table(cell_meta$group, cell_meta$sample))
+print(table(cell_meta$annot_main, cell_meta$group))
+```
+
+### 1. Sample proportions
+
+```{r message=FALSE, warning=FALSE}
+make_prop <- function(meta, cell_col) {
+  totals <- meta |>
+    dplyr::count(sample, group, name = "n_total")
+  meta |>
+    dplyr::count(sample, group, cell = .data[[cell_col]], name = "n") |>
+    complete(nesting(sample, group), cell, fill = list(n = 0)) |>
+    left_join(totals, by = c("sample", "group")) |>
+    mutate(
+      prop = n / n_total,
+      cell = factor(cell, levels = levels(meta[[cell_col]]))
+    )
+}
+
+prop_main <- make_prop(cell_meta, "annot_main")
+prop_sub <- make_prop(cell_meta, "annot_sub")
+write_csv(cell_meta, file.path(tab_path, "cell_meta.csv"))
+write_csv(sample_meta, file.path(tab_path, "sample_meta.csv"))
+write_csv(prop_main, file.path(tab_path, "prop_main.csv"))
+write_csv(prop_sub, file.path(tab_path, "prop_sub.csv"))
+```
+
+```{r message=FALSE, warning=FALSE}
+sample_order <- sample_meta$sample
+ggplot(prop_main, aes(sample, prop, fill = cell)) +
+  geom_col(width = 0.9) +
+  scale_x_discrete(limits = sample_order) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = annot_main_col) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "right"
+  ) +
+  labs(x = NULL, y = "Proportion", fill = "annot_main")
+ggsave(
+  file.path(res_path, "01_prop_main_bar.pdf"),
+  width = 10, height = 5, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(prop_sub, aes(sample, prop, fill = cell)) +
+  geom_col(width = 0.9) +
+  scale_x_discrete(limits = sample_order) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = annot_sub_col) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "right",
+    legend.key.size = unit(0.35, "cm"),
+    legend.text = element_text(size = 7)
+  ) +
+  labs(x = NULL, y = "Proportion", fill = "annot_sub")
+ggsave(
+  file.path(res_path, "01_prop_sub_bar.pdf"),
+  width = 12, height = 6, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(prop_main, aes(group, prop, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  geom_jitter(width = 0.12, size = 1.5, alpha = 0.8) +
+  scale_fill_manual(values = group_col) +
+  facet_wrap(~cell, scales = "free_y") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  labs(x = NULL, y = "Proportion")
+ggsave(
+  file.path(res_path, "01_prop_main_box.pdf"),
+  width = 12, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(prop_sub, aes(group, prop, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  geom_jitter(width = 0.12, size = 1.2, alpha = 0.8) +
+  scale_fill_manual(values = group_col) +
+  facet_wrap(~cell, scales = "free_y") +
+  theme_bw() +
+  theme(legend.position = "none", strip.text = element_text(size = 8)) +
+  labs(x = NULL, y = "Proportion")
+ggsave(
+  file.path(res_path, "01_prop_sub_box.pdf"),
+  width = 16, height = 12, dpi = 600
+)
+```
+
+### 2. Wilcoxon (sensitivity)
+
+每类型独立检验，**不考虑成分约束**，只作对照。主结果看 scCODA / tascCODA。
+
+```{r message=FALSE, warning=FALSE}
+wilcox_props <- function(prop_df) {
+  prop_df |>
+    group_by(cell) |>
+    group_modify(function(d, key) {
+      ctrl <- d$prop[d$group == "CTRL"]
+      aci <- d$prop[d$group == "ACI"]
+      tibble(
+        n_ctrl = length(ctrl),
+        n_aci = length(aci),
+        median_ctrl = median(ctrl),
+        median_aci = median(aci),
+        delta_aci_minus_ctrl = median_aci - median_ctrl,
+        p = wilcox.test(aci, ctrl, exact = FALSE)$p.value
+      )
+    }) |>
+    ungroup() |>
+    mutate(p_adj = p.adjust(p, method = "BH")) |>
+    arrange(p)
+}
+
+wilcox_main <- wilcox_props(prop_main)
+wilcox_sub <- wilcox_props(prop_sub)
+write_csv(wilcox_main, file.path(res_path, "02_wilcox_main.csv"))
+write_csv(wilcox_sub, file.path(res_path, "02_wilcox_sub.csv"))
+wilcox_main
+```
+
+```{r message=FALSE, warning=FALSE}
+wilcox_sub
+```
+
+### 3. Export note
+
+`data/rdata/composition/cell_meta.csv` 给 `07_sccoda.ipynb`。该 notebook 用 pertpy：`annot_main` 做 scCODA，`annot_main` + `annot_sub` 树做 tascCODA。
+
+### 4. miloR
+
+在 Harmony 邻域上检验 ACI vs CTRL。不依赖离散 cluster；邻域再用 `annot_main` / `annot_sub` 注释。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(miloR)
+DefaultAssay(seurat_object) <- "RNA"
+sce <- as.SingleCellExperiment(seurat_object, assay = "RNA")
+reducedDim(sce, "HARMONY") <-
+  Embeddings(seurat_object, "harmony")[, 1:n_dims, drop = FALSE]
+reducedDim(sce, "UMAP") <- Embeddings(seurat_object, "umap")
+colData(sce)$sample <- as.character(colData(sce)$sample)
+colData(sce)$group <- factor(colData(sce)$group, levels = c("CTRL", "ACI"))
+
+milo <- Milo(sce)
+milo <- buildGraph(milo, k = 20, d = n_dims, reduced.dim = "HARMONY")
+milo <- makeNhoods(
+  milo, prop = 0.05, k = 20, d = n_dims,
+  refined = TRUE, reduced_dims = "HARMONY"
+)
+milo <- countCells(
+  milo,
+  meta.data = data.frame(colData(milo)),
+  samples = "sample"
+)
+milo <- calcNhoodDistance(milo, d = n_dims, reduced.dim = "HARMONY")
+
+design_df <- data.frame(colData(milo))[, c("sample", "group")] |>
+  distinct()
+rownames(design_df) <- design_df$sample
+design_df <- design_df[colnames(nhoodCounts(milo)), , drop = FALSE]
+design_df$group <- factor(design_df$group, levels = c("CTRL", "ACI"))
+
+da_results <- testNhoods(
+  milo,
+  design = ~group,
+  design.df = design_df,
+  reduced.dim = "HARMONY"
+)
+da_results <- annotateNhoods(milo, da_results, coldata_col = "annot_main")
+da_results <- annotateNhoods(milo, da_results, coldata_col = "annot_sub")
+milo <- buildNhoodGraph(milo)
+write_csv(da_results, file.path(res_path, "04_milo_da.csv"))
+table(sign(da_results$logFC), da_results$SpatialFDR < 0.1)
+summary(da_results$SpatialFDR)
+```
+
+```{r message=FALSE, warning=FALSE}
+da_results <- da_results |>
+  mutate(
+    da_dir = case_when(
+      SpatialFDR >= 0.1 | is.na(SpatialFDR) ~ "ns",
+      logFC > 0 ~ "ACI",
+      TRUE ~ "CTRL"
+    ),
+    da_dir = factor(da_dir, levels = c("CTRL", "ACI", "ns"))
+  )
+ggplot(da_results, aes(logFC, -log10(SpatialFDR))) +
+  geom_point(aes(color = da_dir), alpha = 0.7, size = 1.2) +
+  scale_color_manual(
+    values = c(group_col, ns = "grey75"),
+    breaks = c("CTRL", "ACI", "ns"),
+    labels = c("CTRL enriched", "ACI enriched", "ns")
+  ) +
+  theme_bw() +
+  labs(color = NULL)
+ggsave(
+  file.path(res_path, "04_milo_volcano.pdf"),
+  width = 7, height = 5, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plotDAbeeswarm(da_results, group.by = "annot_main") +
+  scale_color_gradient2(
+    low = milo_div_col["low"],
+    mid = milo_div_col["mid"],
+    high = milo_div_col["high"]
+  ) +
+  theme_bw()
+ggsave(
+  file.path(res_path, "04_milo_beeswarm_main.pdf"),
+  width = 8, height = 6, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plotDAbeeswarm(da_results, group.by = "annot_sub") +
+  scale_color_gradient2(
+    low = milo_div_col["low"],
+    mid = milo_div_col["mid"],
+    high = milo_div_col["high"]
+  ) +
+  theme_bw()
+ggsave(
+  file.path(res_path, "04_milo_beeswarm_sub.pdf"),
+  width = 8, height = 10, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plotNhoodGraphDA(
+  milo, as.data.frame(da_results), alpha = 0.1, layout = "UMAP"
+) +
+  scale_fill_gradient2(
+    low = milo_div_col["low"],
+    mid = milo_div_col["mid"],
+    high = milo_div_col["high"],
+    name = "logFC"
+  )
+ggsave(
+  file.path(res_path, "04_milo_graph.pdf"),
+  width = 8, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(milo, file.path(tab_path, "milo.qs2"), nthreads = 10)
+sessionInfo()
+```

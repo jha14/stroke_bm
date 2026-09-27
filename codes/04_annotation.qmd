@@ -1,0 +1,205 @@
+---
+title: "Cell Type Annotation"
+format:
+  html:
+    embed-resources: true
+---
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, presto, cowplot, SCpubr, scop, qs2)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+alpha <- .03
+pt_size <- .03
+raster <- FALSE
+raster_dpi <- c(3000, 3000)
+min_cutoff <- "q10"
+max_cutoff <- "q90"
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/dim_reduction"
+obj_path <- "data/rdata/dim_reduction"
+if (!dir.exists(res_path)) dir.create(res_path, recursive = TRUE)
+if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
+if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  qs_read(
+    "data/rdata/dim_reduction/seurat_object_clustered.qs2",
+    nthreads = 10
+  )
+Layers(seurat_object)
+DefaultLayer(seurat_object@assays$RNA)
+```
+
+```{r message=FALSE, warning=FALSE}
+resolutions <- c(0.1, 0.2, 0.5, 1, 1.5, 2)
+sc_markers <- list()
+
+for (res in resolutions) {
+  col_name <- paste0("harmony_clusters_", res)
+
+  Idents(seurat_object) <- col_name
+
+  cat(sprintf("\n=== Resolution %s Cell Counts ===\n", res))
+  print(table(Idents(seurat_object)))
+
+  sc_markers[[paste0("all_markers_", res)]] <- FindAllMarkers(
+    seurat_object,
+    only.pos = TRUE
+  )
+}
+
+qs_save(sc_markers, file.path(obj_path, "sc_markers.qs2"), nthreads = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 3,
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_0.1",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_0.2",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_0.5",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_1",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_1.5",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_2",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+# 与下方 cluster_map 对齐：marker 表和 cluster 映射必须用同一个分辨率（res 2）
+marker_table <-
+  sc_markers[["all_markers_2"]] |>
+    group_by(cluster) |>
+    slice_head(n = 20) |>
+    group_by(cluster) |>
+    mutate(rank = paste0("Top_", row_number())) |>
+    pivot_wider(id_cols = rank, names_from = cluster, values_from = gene)
+
+# View(marker_table)
+```
+
+```{r message=FALSE, warning=FALSE}
+cluster_map <- c(
+  "1" = "T/NK",
+  "2" = "Neut",
+  "3" = "Neut",
+  "4" = "T/NK",
+  "5" = "Neut",
+  "6" = "Neut",
+  "7" = "T/NK",
+  "8" = "Pre-Neut",
+  "9" = "Ery",
+  "10" = "Mono/Mac/DC",
+  "11" = "Pre-Neut",
+  "12" = "Neut",
+  "13" = "Pre-Neut",
+  "14" = "Neut",
+  "15" = "T/NK",
+  "16" = "B",
+  "17" = "Ery",
+  "18" = "Pre-Neut",
+  "19" = "Neut",
+  "20" = "T/NK",
+  "21" = "HSPC",
+  "22" = "Ery",
+  "23" = "B",
+  "24" = "HSPC",
+  "25" = "Pre-Neut",
+  "26" = "Pre-Neut",
+  "27" = "T/NK",
+  "28" = "Mono/Mac/DC",
+  "29" = "Mono/Mac/DC",
+  "30" = "Pre-Neut",
+  "31" = "HSPC",
+  "32" = "B",
+  "33" = "Plasma",
+  "34" = "B",
+  "35" = "pDC",
+  "36" = "Ery",
+  "37" = "Pre-Neut",
+  "38" = "B"
+)
+
+seurat_object$annot <-
+  unname(cluster_map[as.character(seurat_object$harmony_clusters_2)])
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(
+  seurat_object,
+  reduction = "umap_harmony",
+  group.by = "annot",
+  pt.size = .1, alpha = .1,
+  raster = FALSE, label = TRUE
+) + theme(aspect.ratio = 1)
+
+ggsave("results/dim_reduction/umap_harmony_first_annot.pdf",
+       width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(
+  seurat_object,
+  file = "data/rdata/seurat_object_first_annot.qs2",
+  nthreads = 10
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+sessionInfo()
+```

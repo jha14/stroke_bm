@@ -1,0 +1,962 @@
+---
+title: "Subtype: Neutrophil"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+第一轮只 subset `Neut` + `Pre-Neut`，不自动并入 HSPC cluster 21。GMP / promyelocyte barcode 确认后再另存。低质量 / doublet 留给 round 2。CellTypist 常把骨髓中性粒标成单核，只作参考。
+
+Subset 后重新 `NormalizeData`：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 `scale.data` 后也需要从 counts 重建 `data`。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, presto, SCpubr, scop)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/subtype/neutrophil"
+obj_path <- "data/rdata/subtype"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+alpha <- .5
+pt_size <- .5
+raster <- FALSE
+raster_dpi <- c(3000, 3000)
+min_cutoff <- "q10"
+max_cutoff <- "q90"
+n_hvg <- 3000
+```
+
+```{r message=FALSE, warning=FALSE}
+test_genes <- qs_read("data/rdata/test_genes.qs2", nthreads = 10)
+seurat_object <-
+  qs_read("data/rdata/seurat_object_first_annot.qs2", nthreads = 10)
+
+table(seurat_object$annot)
+seurat_object <-
+  subset(seurat_object, subset = annot %in% c("Neut", "Pre-Neut"))
+dim(seurat_object)
+table(seurat_object$annot)
+table(seurat_object$harmony_clusters_2)
+```
+
+```{r message=FALSE, warning=FALSE}
+if (length(Layers(seurat_object, search = "counts")) > 1) {
+  seurat_object <- JoinLayers(seurat_object)
+}
+seurat_object[["RNA"]]$data <- NULL
+seurat_object[["RNA"]]$scale.data <- NULL
+DefaultLayer(seurat_object@assays$RNA)
+Layers(seurat_object)
+```
+
+### 1. Normalize, HVG, Scale, PCA
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+seurat_object <- FindVariableFeatures(
+  seurat_object,
+  nfeatures = n_hvg,
+  verbose = TRUE
+)
+head(VariableFeatures(seurat_object), 20)
+LabelPoints(
+  plot = VariableFeaturePlot(seurat_object),
+  points = head(VariableFeatures(seurat_object), 20),
+  repel = TRUE
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+pca_features <- setdiff(
+  VariableFeatures(seurat_object),
+  test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+)
+sum(VariableFeatures(seurat_object) %in% test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr])
+seurat_object <- ScaleData(
+  seurat_object,
+  features = pca_features,
+  assay = "RNA"
+)
+seurat_object <- RunPCA(
+  seurat_object,
+  npcs = 50,
+  features = pca_features,
+  verbose = TRUE,
+  reduction.name = "pca"
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+num_pcs <- list()
+num_pcs$pct <-
+  seurat_object[["pca"]]@stdev / sum(seurat_object[["pca"]]@stdev) * 100
+num_pcs$cumu <- cumsum(num_pcs$pct)
+num_pcs$co1 <- which(num_pcs$cumu > 80 & num_pcs$pct < 5)[1]
+num_pcs$co2 <- sort(
+  which(
+    (num_pcs$pct[seq_along(num_pcs$pct)[-length(num_pcs$pct)]] -
+      num_pcs$pct[seq_along(num_pcs$pct)[-1]]) > 0.1
+  ),
+  decreasing = TRUE
+)[1] + 1
+num_pcs$pcs <- min(num_pcs$co1, num_pcs$co2)
+num_pcs$co1
+num_pcs$co2
+num_pcs$pcs
+ElbowPlot(seurat_object, reduction = "pca", ndims = 50)
+```
+
+### 2. Harmony
+
+```{r message=FALSE, warning=FALSE}
+tic("Harmony integration")
+seurat_object <- RunHarmony(
+  seurat_object,
+  c("sample"),
+  ncores = 15,
+  plot_convergence = TRUE
+)
+toc()
+```
+
+```{r message=FALSE, warning=FALSE}
+num_pcs <- list()
+num_pcs$pct <-
+  seurat_object[["harmony"]]@stdev /
+  sum(seurat_object[["harmony"]]@stdev) * 100
+num_pcs$cumu <- cumsum(num_pcs$pct)
+num_pcs$co1 <- which(num_pcs$cumu > 90 & num_pcs$pct < 5)[1]
+num_pcs$co2 <- sort(
+  which(
+    (num_pcs$pct[seq_along(num_pcs$pct)[-length(num_pcs$pct)]] -
+      num_pcs$pct[seq_along(num_pcs$pct)[-1]]) > 0.1
+  ),
+  decreasing = TRUE
+)[1] + 1
+num_pcs$co1
+num_pcs$co2
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap <- function(obj, dims, file) {
+  umap_temp <- RunUMAP(
+    obj,
+    dims = 1:dims,
+    reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+  p <- plot_grid(
+    ncol = 2,
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "sample",
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1),
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "group",
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1),
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "phase",
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1),
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "is_doublet",
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1)
+  )
+  ggsave(file, plot = p, width = 14, height = 12, dpi = 600)
+  p
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap(seurat_object, 20, file.path(res_path, "01_dim_umap20.pdf"))
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap(seurat_object, 30, file.path(res_path, "01_dim_umap30.pdf"))
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap(seurat_object, 40, file.path(res_path, "01_dim_umap40.pdf"))
+```
+
+```{r message=FALSE, warning=FALSE}
+# 看过 20/30/40 后改这里
+n_dims <- 40
+seurat_object <- RunUMAP(
+  seurat_object,
+  dims = 1:n_dims,
+  reduction = "harmony",
+  reduction.name = "umap_harmony"
+)
+```
+
+### 3. Clustering
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- FindNeighbors(
+  seurat_object,
+  reduction = "harmony",
+  dims = 1:n_dims
+)
+for (res in c(1, 2, 3, 4)) {
+  print(res)
+  set.seed(123)
+  seurat_object <- FindClusters(
+    seurat_object,
+    cluster.name = paste0("harmony_clusters_", res),
+    resolution = res,
+    algorithm = 4
+  )
+  gc()
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_1", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_2", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_3", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_4", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend()
+)
+ggsave(
+  file.path(res_path, "02_qc_clusters.pdf"),
+  width = 14, height = 18, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  FeaturePlot(
+    seurat_object, reduction = "umap_harmony", features = "nFeature_RNA",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  FeaturePlot(
+    seurat_object, reduction = "umap_harmony", features = "percent_mt",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony", group.by = "is_doublet",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_4", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "harmony_clusters_4"
+VlnPlot(
+  seurat_object,
+  features = c("nFeature_RNA", "nCount_RNA", "percent_mt", "doublet_score"),
+  ncol = 2, pt.size = 0
+)
+```
+
+### 4. Markers
+
+```{r message=FALSE, warning=FALSE}
+marker_groups <- list(
+  promyelocyte = c("AZU1", "MPO", "ELANE", "CTSG", "PRTN3", "CD34"),
+  pre_neut = c("LTF", "LCN2", "CAMP", "MNDA", "RETN"),
+  mature_neut = c("FCGR3B", "CXCR2", "NAMPT", "CSF3R", "S100A8", "S100A9"),
+  cycling = c("MKI67", "TOP2A", "PCNA"),
+  HSPC = c("CD34", "SPINK2", "AVP"),
+  mono = c("CD14", "FCN1", "CD68"),
+  lymphoid = c("CD3D", "MS4A1", "CA1", "HBB"),
+  mast = c("CPA3", "TPSAB1")
+)
+
+Idents(seurat_object) <- "harmony_clusters_4"
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_groups,
+  legend.length = 10
+)
+ggsave(
+  file.path(res_path, "02_qc_dotplot.pdf"),
+  width = 16, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "harmony_clusters_4"
+table(Idents(seurat_object))
+neutrophil_markers <- FindAllMarkers(seurat_object, only.pos = TRUE)
+
+marker_table <-
+  neutrophil_markers |>
+  group_by(cluster) |>
+  slice_head(n = 20) |>
+  mutate(rank = paste0("Top_", row_number())) |>
+  pivot_wider(id_cols = rank, names_from = cluster, values_from = gene)
+marker_table
+```
+
+```{r message=FALSE, warning=FALSE}
+pred_file <- "celltypist/predictions_low.tsv"
+if (file.exists(pred_file)) {
+  pred <- read_tsv(pred_file, show_col_types = FALSE)
+  barcode_col <- names(pred)[1]
+  pred_vec <- setNames(pred$majority_voting, pred[[barcode_col]])
+  seurat_object$celltypist_low <-
+    unname(pred_vec[colnames(seurat_object)])
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "celltypist_low",
+    label = TRUE, repel = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+}
+```
+
+### 5. Round 2 (optional)
+
+看完 cluster / QC / marker 后填写要丢掉的 `harmony_clusters_4` ID。空向量则跳过。丢掉后会从 counts 再 Normalize → HVG → PCA → Harmony → cluster。
+
+```{r message=FALSE, warning=FALSE}
+drop_clusters <- c(17, 30, 35, 36)
+# drop_clusters <- c("3", "7")
+```
+
+```{r message=FALSE, warning=FALSE}
+if (length(drop_clusters) == 0) {
+  message("No clusters listed to drop; skip round 2.")
+} else {
+  n_before <- ncol(seurat_object)
+  keep_cells <- colnames(seurat_object)[
+    !(as.character(seurat_object$harmony_clusters_4) %in%
+      as.character(drop_clusters))
+  ]
+  seurat_object <- subset(seurat_object, cells = keep_cells)
+  message(
+    sprintf("Dropped %s cells; %s remain.", n_before - ncol(seurat_object), ncol(seurat_object))
+  )
+
+  Idents(seurat_object) <- "sample"
+  drop_cols <- grep(
+    "^harmony_clusters_|^seurat_clusters$",
+    colnames(seurat_object[[]]),
+    value = TRUE
+  )
+  seurat_object@meta.data <-
+    seurat_object@meta.data[, setdiff(colnames(seurat_object[[]]), drop_cols), drop = FALSE]
+
+  seurat_object[["RNA"]]$data <- NULL
+  seurat_object[["RNA"]]$scale.data <- NULL
+  seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+  seurat_object <- FindVariableFeatures(
+    seurat_object, nfeatures = n_hvg, verbose = TRUE
+  )
+  pca_features <- setdiff(
+    VariableFeatures(seurat_object),
+    test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+  )
+  seurat_object <- ScaleData(seurat_object, features = pca_features, assay = "RNA")
+  seurat_object <- RunPCA(
+    seurat_object, npcs = 50, features = pca_features,
+    verbose = TRUE, reduction.name = "pca"
+  )
+  seurat_object <- RunHarmony(
+    seurat_object, c("sample"), ncores = 15, plot_convergence = TRUE
+  )
+  seurat_object <- RunUMAP(
+    seurat_object, dims = 1:n_dims, reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+  seurat_object <- FindNeighbors(
+    seurat_object, reduction = "harmony", dims = 1:n_dims
+  )
+  for (res in c(1, 2, 3, 4)) {
+    set.seed(123)
+    seurat_object <- FindClusters(
+      seurat_object,
+      cluster.name = paste0("harmony_clusters_", res),
+      resolution = res,
+      algorithm = 4
+    )
+  }
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_4", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+}
+```
+
+### 5b. Check cleanup
+
+确认低质量 / 污染 cluster 是否已经去掉。还不干净就填下一节的 `drop_clusters_r3`。
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_1", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_2", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_3", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony",
+    group.by = "harmony_clusters_4", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend()
+)
+ggsave(
+  file.path(res_path, "03_postqc_clusters.pdf"),
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  FeaturePlot(
+    seurat_object, reduction = "umap_harmony", features = "nFeature_RNA",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  FeaturePlot(
+    seurat_object, reduction = "umap_harmony", features = "nCount_RNA",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  FeaturePlot(
+    seurat_object, reduction = "umap_harmony", features = "percent_mt",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object, reduction = "umap_harmony", group.by = "is_doublet",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  file.path(res_path, "03_postqc_metrics.pdf"),
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "harmony_clusters_4"
+VlnPlot(
+  seurat_object,
+  features = c("nFeature_RNA", "nCount_RNA", "percent_mt", "doublet_score"),
+  ncol = 2, pt.size = 0
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "harmony_clusters_4"
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_groups,
+  legend.length = 10
+)
+ggsave(
+  file.path(res_path, "03_postqc_dotplot.pdf"),
+  width = 16, height = 8, dpi = 600
+)
+```
+
+还不干净时填写 **当前** `harmony_clusters_4` 的 ID。只 subset，下一节再重新跑流程。
+
+```{r message=FALSE, warning=FALSE}
+drop_clusters_r3 <- c()
+# drop_clusters_r3 <- c("2", "5")
+```
+
+```{r message=FALSE, warning=FALSE}
+if (length(drop_clusters_r3) == 0) {
+  message("No extra clusters to drop.")
+} else {
+  n_before <- ncol(seurat_object)
+  keep_cells <- colnames(seurat_object)[
+    !(as.character(seurat_object$harmony_clusters_4) %in%
+      as.character(drop_clusters_r3))
+  ]
+  seurat_object <- subset(seurat_object, cells = keep_cells)
+  message(
+    sprintf("Dropped %s cells; %s remain.", n_before - ncol(seurat_object), ncol(seurat_object))
+  )
+}
+```
+
+### 6. Recluster for annotation
+
+清理确认后再 Normalize → HVG → PCA → Harmony → UMAP（reduction 名 `umap`），分辨率 0.1 / 0.2 / 0.5 / 1。
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "sample"
+drop_cols <- grep(
+  "^harmony_clusters_|^seurat_clusters$",
+  colnames(seurat_object[[]]),
+  value = TRUE
+)
+if (length(drop_cols) > 0) {
+  seurat_object@meta.data <-
+    seurat_object@meta.data[, setdiff(colnames(seurat_object[[]]), drop_cols), drop = FALSE]
+}
+
+seurat_object[["RNA"]]$data <- NULL
+seurat_object[["RNA"]]$scale.data <- NULL
+seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+seurat_object <- FindVariableFeatures(
+  seurat_object, nfeatures = n_hvg, verbose = TRUE
+)
+pca_features <- setdiff(
+  VariableFeatures(seurat_object),
+  test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+)
+seurat_object <- ScaleData(seurat_object, features = pca_features, assay = "RNA")
+seurat_object <- RunPCA(
+  seurat_object, npcs = 50, features = pca_features,
+  verbose = TRUE, reduction.name = "pca"
+)
+tic("Harmony integration")
+seurat_object <- RunHarmony(
+  seurat_object, c("sample"), ncores = 15, plot_convergence = TRUE
+)
+toc()
+seurat_object <- RunUMAP(
+  seurat_object, dims = 1:20, reduction = "harmony",
+  reduction.name = "umap"
+)
+seurat_object <- FindNeighbors(
+  seurat_object, reduction = "harmony", dims = 1:20
+)
+for (res in c(0.1, 0.2, 0.5, 1)) {
+  print(res)
+  set.seed(123)
+  seurat_object <- FindClusters(
+    seurat_object,
+    cluster.name = paste0("harmony_clusters_", res),
+    resolution = res,
+    algorithm = 4
+  )
+  gc()
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    seurat_object, reduction = "umap",
+    group.by = "harmony_clusters_0.1", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap",
+    group.by = "harmony_clusters_0.2", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap",
+    group.by = "harmony_clusters_0.5", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend(),
+  DimPlot(
+    seurat_object, reduction = "umap",
+    group.by = "harmony_clusters_1", label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1) + NoLegend()
+)
+ggsave(
+  file.path(res_path, "04_recluster.pdf"),
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "harmony_clusters_1"
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_groups,
+  legend.length = 10
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+# 改 ident.1 为要检查是否该拆开的 cluster
+FindMarkers(
+  seurat_object,
+  group.by = "harmony_clusters_1",
+  ident.1 = 2,
+  only.pos = TRUE
+) |>
+  head(n = 20)
+```
+
+### 7. Markers for annotation
+
+骨髓中性粒按发育轴标，不必硬套肝癌 11 群：
+
+1. **Promyelocyte**：`DEFA1/3/4` `AZU1` `MPO` 高，**还没有** `LTF`/`CAMP`。
+2. **Pre-Neut**：二次颗粒 **`LTF` `LCN2` `CAMP` `RETN`** 高，`MMP9`/`S100A12` 还低。这批细胞多，就是 NP / 带状核前体。
+3. **Mature**：`LTF` 下来，开始出现 **`MMP9` `SLC8A1` `S100A12` `TXNIP` `ISG15`**。能拆开就按优势基因标成 MMP9 / SLC8A1 / S100A12 / TXNIP / ISG15 Neut；糊在一起就并成 Mature Neut。
+
+`LTF+` 又略有 `MMP9` 的中间态并进 Pre-Neut。Xue 的 TAN 基因（`CCL4` `SPP1` `CD74`）骨髓里可以没有。污染看 `NKG7`/`CD3D`。
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD34", "SPINK2", "AVP", "AZU1", "MPO", "ELANE", "CTSG", "PRTN3"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_GMP.pdf"), width = 18, height = 15)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("DEFA1", "DEFA3", "DEFA4", "AZU1", "MPO", "ELANE", "CTSG", "PRTN3"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_promyelo.pdf"), width = 18, height = 15)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("LTF", "LCN2", "CAMP", "MNDA", "RETN"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_preNeut.pdf"), width = 18, height = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("FCGR3B", "CXCR2", "NAMPT", "CSF3R", "S100A8", "S100A9"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_mature.pdf"), width = 18, height = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("MMP8", "S100A12", "ISG15", "TXNIP", "ELL2", "PTGS2"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_xueBlood.pdf"), width = 18, height = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("APOA2", "CD74", "IFIT1", "SPP1", "CCL4", "CD274"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_xueTAN.pdf"), width = 18, height = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("MMP9", "SLC8A1", "S100A12", "TXNIP", "ISG15"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_states.pdf"), width = 18, height = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("MKI67", "TOP2A", "PCNA"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_cycling.pdf"), width = 18, height = 5)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c(
+    "CD3D", "NKG7", "GNLY", "KLRF1",
+    "MS4A1", "CD79A", "CD14", "FCN1",
+    "CD34", "CA1", "HBB", "PF4"
+  ),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(file.path(res_path, "05_markers_contam.pdf"), width = 18, height = 20)
+```
+
+### 8. Annotation
+
+`annot_cluster` 和 `cluster_map` 必须同一套分辨率。看过 `04_recluster` 和上面 FeaturePlot 后再改。
+
+```{r message=FALSE, warning=FALSE}
+annot_cluster <- "harmony_clusters_0.5"
+Idents(seurat_object) <- annot_cluster
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- annot_cluster
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_groups,
+  legend.length = 10
+)
+ggsave(
+  file.path(res_path, "05_markers_dotplot.pdf"),
+  width = 16, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- annot_cluster
+table(Idents(seurat_object))
+neutrophil_markers <- FindAllMarkers(seurat_object, only.pos = TRUE)
+marker_table <-
+  neutrophil_markers |>
+  group_by(cluster) |>
+  slice_head(n = 20) |>
+  mutate(rank = paste0("Top_", row_number())) |>
+  pivot_wider(id_cols = rank, names_from = cluster, values_from = gene)
+marker_table
+```
+
+`cluster_map` 的 key 必须对应 `annot_cluster`。反复核对 FeaturePlot / DotPlot / marker 表后再填。
+
+```{r message=FALSE, warning=FALSE}
+cluster_map <- c(
+  "1" = "SLC8A1 Neut",
+  "2" = "S100A12 Neut",
+  "3" = "MMP8 Pre-Neut",
+  "4" = "MMP9 Pre-Neut",
+  "5" = "Promyelocyte",
+  "6" = "ISG15 Neut",
+  "7" = "MMP8 Pre-Neut",
+  "8" = "remove"
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+if (length(cluster_map) == 0) {
+  message("cluster_map empty; skip subtype annotation.")
+} else {
+  cluster_ids <- as.character(
+    FetchData(seurat_object, vars = annot_cluster)[, 1]
+  )
+  seurat_object$annot_subtype <- unname(cluster_map[cluster_ids])
+  table(seurat_object$annot_subtype, useNA = "ifany")
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(
+  seurat_object, reduction = "umap", group.by = "is_doublet",
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+) + theme(aspect.ratio = 1)
+ggsave(
+  file.path(res_path, "06_annot_doublets.pdf"),
+  width = 8, height = 8, dpi = 600
+)
+```
+
+丢掉 `remove` 和 doublet，再 Normalize → HVG → PCA → Harmony → UMAP（`dims = 1:20`），**不再聚类**。
+
+```{r message=FALSE, warning=FALSE}
+n_before <- ncol(seurat_object)
+keep_cells <- colnames(seurat_object)[
+  !(seurat_object$annot_subtype %in% "remove" |
+    seurat_object$is_doublet %in% "doublet")
+]
+seurat_object <- subset(seurat_object, cells = keep_cells)
+message(sprintf(
+  "Dropped remove/doublet: %s cells; %s remain.",
+  n_before - ncol(seurat_object),
+  ncol(seurat_object)
+))
+annot_levels <- c(
+  "Promyelocyte", "MMP8 Pre-Neut", "MMP9 Pre-Neut",
+  "S100A12 Neut", "SLC8A1 Neut", "ISG15 Neut"
+)
+seurat_object$annot_subtype <- factor(
+  seurat_object$annot_subtype,
+  levels = intersect(annot_levels, unique(as.character(seurat_object$annot_subtype)))
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "sample"
+seurat_object[["RNA"]]$data <- NULL
+seurat_object[["RNA"]]$scale.data <- NULL
+seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+seurat_object <- FindVariableFeatures(
+  seurat_object, nfeatures = n_hvg, verbose = TRUE
+)
+pca_features <- setdiff(
+  VariableFeatures(seurat_object),
+  test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+)
+seurat_object <- ScaleData(seurat_object, features = pca_features, assay = "RNA")
+seurat_object <- RunPCA(
+  seurat_object, npcs = 50, features = pca_features,
+  verbose = TRUE, reduction.name = "pca"
+)
+tic("Harmony integration")
+seurat_object <- RunHarmony(
+  seurat_object, c("sample"), ncores = 15, plot_convergence = TRUE
+)
+toc()
+seurat_object <- RunUMAP(
+  seurat_object, dims = 1:20, reduction = "harmony",
+  reduction.name = "umap"
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(
+  seurat_object,
+  reduction = "umap",
+  group.by = "annot_subtype",
+  pt.size = pt_size,
+  alpha = alpha,
+  raster = raster,
+  raster.dpi = raster_dpi,
+  label = TRUE
+) + theme(aspect.ratio = 1)
+ggsave(
+  file.path(res_path, "06_annot_umap.pdf"),
+  width = 8, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    seurat_object, reduction = "umap", group.by = "annot_subtype",
+    label = TRUE,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object, reduction = "umap", group.by = "sample",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object, reduction = "umap", group.by = "group",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object, reduction = "umap", group.by = "phase",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  file.path(res_path, "06_annot_overview.pdf"),
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "annot_subtype"
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_groups,
+  legend.length = 10
+)
+ggsave(
+  file.path(res_path, "06_annot_dotplot.pdf"),
+  width = 16, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(
+  seurat_object,
+  file = file.path(obj_path, "seurat_object_neutrophil.qs2"),
+  nthreads = 10
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+sessionInfo()
+```

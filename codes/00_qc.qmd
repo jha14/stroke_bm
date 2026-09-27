@@ -1,0 +1,551 @@
+---
+title: "Quality Control"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, qs2, scDblFinder, BiocParallel)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+```
+
+### 1. Load Data
+
+```{r message=FALSE, warning=FALSE}
+all_data <- list()
+
+all_data[["ctrl_1"]] <-
+  Read10X(data.dir = "data/cr_output/220401M62/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "ctrl_1")
+all_data[["ctrl_1"]]@meta.data <- all_data[["ctrl_1"]]@meta.data %>%
+  mutate(sample = "CTRL-1", group = "CTRL", gender = "Male", age = 62)
+
+all_data[["ctrl_2"]] <-
+  Read10X(data.dir = "data/cr_output/CYM_SkullBM_240322/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "ctrl_2")
+all_data[["ctrl_2"]]@meta.data <- all_data[["ctrl_2"]]@meta.data %>%
+  mutate(sample = "CTRL-2", group = "CTRL", gender = "Female", age = 59)
+
+all_data[["ctrl_3"]] <-
+  Read10X(data.dir = "data/cr_output/LWN_SkullBM_240407/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "ctrl_3")
+all_data[["ctrl_3"]]@meta.data <- all_data[["ctrl_3"]]@meta.data %>%
+  mutate(sample = "CTRL-3", group = "CTRL", gender = "Male", age = 77)
+
+all_data[["ctrl_4"]] <-
+  Read10X(data.dir = "data/cr_output/LXY_SkullBM_240412/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "ctrl_4")
+all_data[["ctrl_4"]]@meta.data <- all_data[["ctrl_4"]]@meta.data %>%
+  mutate(sample = "CTRL-4", group = "CTRL", gender = "Female", age = 60)
+
+all_data[["ctrl_5"]] <-
+  Read10X(data.dir = "data/cr_output/STX_SkullBM_240229/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "ctrl_5")
+all_data[["ctrl_5"]]@meta.data <- all_data[["ctrl_5"]]@meta.data %>%
+  mutate(sample = "CTRL-5", group = "CTRL", gender = "Male", age = 30)
+
+all_data[["ctrl_6"]] <-
+  Read10X(data.dir = "data/cr_output/ZM_SkullBM_240620/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "ctrl_6")
+all_data[["ctrl_6"]]@meta.data <- all_data[["ctrl_6"]]@meta.data %>%
+  mutate(sample = "CTRL-6", group = "CTRL", gender = "Female", age = 30)
+
+all_data[["aci_1"]] <-
+  Read10X(data.dir = "data/cr_output/CBM_3/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "aci_1")
+all_data[["aci_1"]]@meta.data <- all_data[["aci_1"]]@meta.data %>%
+  mutate(sample = "ACI-1", group = "ACI", gender = "Male", age = 54)
+
+all_data[["aci_2"]] <-
+  Read10X(data.dir = "data/cr_output/CBM_4/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "aci_2")
+all_data[["aci_2"]]@meta.data <- all_data[["aci_2"]]@meta.data %>%
+  mutate(sample = "ACI-2", group = "ACI", gender = "Male", age = 75)
+
+all_data[["aci_3"]] <-
+  Read10X(data.dir = "data/cr_output/CBM_6/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "aci_3")
+all_data[["aci_3"]]@meta.data <- all_data[["aci_3"]]@meta.data %>%
+  mutate(sample = "ACI-3", group = "ACI", gender = "Male", age = 50)
+
+all_data[["aci_4"]] <-
+  Read10X(data.dir = "data/cr_output/CBM_5/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "aci_4")
+all_data[["aci_4"]]@meta.data <- all_data[["aci_4"]]@meta.data %>%
+  mutate(sample = "ACI-4", group = "ACI", gender = "Female", age = 65)
+
+all_data[["aci_5"]] <-
+  Read10X(data.dir = "data/cr_output/CBM_2/filtered_feature_bc_matrix") %>%
+  CreateSeuratObject(project = "aci_5")
+all_data[["aci_5"]]@meta.data <- all_data[["aci_5"]]@meta.data %>%
+  mutate(sample = "ACI-5", group = "ACI", gender = "Male", age = 35)
+
+qs_save(all_data, file = "data/rdata/preprocess/all_data.qs2", nthreads = 10)
+```
+
+### 2. Merge Layers
+
+```{r message=FALSE, warning=FALSE}
+all_data <- qs_read("data/rdata/preprocess/all_data.qs2", nthreads = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+all_data_qc <-
+  merge(all_data[[1]], all_data[-1], add.cell.ids = names(all_data))
+Layers(all_data_qc)
+
+
+all_data_qc <- JoinLayers(all_data_qc)
+rm(all_data)
+Layers(all_data_qc)
+
+dim(all_data_qc)
+dim(all_data_qc@assays$RNA$counts)
+
+as.data.frame(all_data_qc@assays$RNA$counts[1:10, 1:2])
+head(all_data_qc@meta.data, 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+all_data_qc@meta.data |>
+  dplyr::select(orig.ident, sample) |>
+  distinct()
+```
+
+### 3. Calcuate QC
+
+```{r message=FALSE, warning=FALSE}
+grep("^MT-", rownames(all_data_qc), value = TRUE)
+grep("^RP[SL]", rownames(all_data_qc), value = TRUE)
+grep("^HB[ABDEGMQZ]\\d*$", rownames(all_data_qc), value = TRUE)
+grep("PF4|PPBP", rownames(all_data_qc), value = TRUE)
+
+all_data_qc <- PercentageFeatureSet(
+  all_data_qc,
+  "^MT-",
+  assay = "RNA",
+  col.name = "percent_mt"
+)
+all_data_qc <- PercentageFeatureSet(
+  all_data_qc,
+  "^RP[SL]",
+  assay = "RNA",
+  col.name = "percent_rb"
+)
+all_data_qc <- PercentageFeatureSet(
+  all_data_qc,
+  "^HB[ABDEGMQZ]\\d*$",
+  col.name = "percent_hb"
+)
+all_data_qc <- PercentageFeatureSet(
+  all_data_qc,
+  "PF4|PPBP",
+  assay = "RNA",
+  col.name = "percent_pt"
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+head(all_data_qc[[]])
+```
+
+Violin plot before filtering
+
+```{r message=FALSE, warning=FALSE}
+vln_qc <- list()
+vln_qc$before_sample <-
+  VlnPlot(all_data_qc, group.by = "orig.ident", layer = "counts",
+          features = c("nFeature_RNA", "nCount_RNA", "percent_mt",
+                       "percent_rb", "percent_hb", "percent_pt"),
+          pt.size = 0,
+          ncol = 3) + NoLegend()
+```
+
+https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/tutorials/neutrophils
+
+2\^6 = 64
+
+2\^7.5 = 181
+
+https://www.nature.com/articles/s41586-022-05400-x, methods section, scRNA-seq data processing
+
+```{r message=FALSE, warning=FALSE}
+range(all_data_qc$nFeature_RNA)
+```
+
+```{r message=FALSE, warning=FALSE}
+vln_qc$before_sample[[1]] <-
+  vln_qc$before_sample[[1]] +
+  geom_hline(yintercept = 5000, col = "red") +
+  geom_hline(yintercept = 100, col = "red")
+vln_qc$before_sample[[1]]
+```
+
+```{r message=FALSE, warning=FALSE}
+range(all_data_qc$nCount_RNA)
+```
+
+```{r message=FALSE, warning=FALSE}
+vln_qc$before_sample[[2]] <-
+  vln_qc$before_sample[[2]] +
+  geom_hline(yintercept = 20000, col = "red")
+vln_qc$before_sample[[2]]
+```
+
+```{r message=FALSE, warning=FALSE}
+vln_qc$before_sample[[3]] <-
+  vln_qc$before_sample[[3]] +
+  geom_hline(yintercept = 5, col = "red")
+vln_qc$before_sample[[3]]
+```
+
+```{r message=FALSE, warning=FALSE}
+# vln_qc$before_sample[[5]] <-
+#   vln_qc$before_sample[[5]] +
+#   geom_hline(yintercept = 25, col = "red")
+# vln_qc$before_sample[[5]]
+```
+
+```{r message=FALSE, warning=FALSE}
+vln_qc$before_sample
+```
+
+```{r message=FALSE, warning=FALSE}
+vln_qc$before_group <-
+  VlnPlot(all_data_qc, group.by = "group", layer = "counts",
+          features = c("nFeature_RNA", "nCount_RNA", "percent_mt",
+                       "percent_rb", "percent_hb", "percent_pt"),
+          pt.size = 0,
+          ncol = 3) + NoLegend()
+vln_qc$before_group
+```
+
+```{r message=FALSE, warning=FALSE}
+FeatureScatter(
+  all_data_qc,
+  "nCount_RNA",
+  "nFeature_RNA",
+  group.by = "orig.ident",
+  pt.size = 0.2
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(
+  all_data_qc,
+  file = "data/rdata/preprocess/all_data_qc.qs2",
+  nthreads = 10
+)
+rm(all_data_qc)
+gc()
+```
+
+### 4. Detection-based Filtering
+
+```{r message=FALSE, warning=FALSE}
+all_data_qc <- qs_read("data/rdata/preprocess/all_data_qc.qs2", nthreads = 10)
+dim(all_data_qc)
+
+selected_c <- WhichCells(
+  all_data_qc,
+  slot = "counts",
+  expression = nFeature_RNA > 100 &
+    nFeature_RNA < 5000 &
+    nCount_RNA < 20000
+)
+length(selected_c)
+
+scales::percent(
+  (dim(all_data_qc)[2] - length(selected_c)) / dim(all_data_qc)[2],
+  accuracy = 0.01
+)
+
+selected_f0 <- rownames(all_data_qc)[
+  Matrix::rowSums(all_data_qc@assays$RNA$counts) > 0
+]
+length(selected_f0)
+
+n_feature_sample <- rowSums(x = GetAssayData(all_data_qc, layer = "counts") > 0)
+sum(n_feature_sample > 0)
+length(n_feature_sample)
+
+identical(selected_f0, names(n_feature_sample)[n_feature_sample > 0])
+
+
+selected_f <- names(n_feature_sample)[n_feature_sample > 100]
+length(selected_f)
+
+scales::percent(
+  (length(n_feature_sample) - length(selected_f)) /
+    length(n_feature_sample),
+  accuracy = 0.01
+)
+
+
+data_filt_qc <- subset(all_data_qc, cells = selected_c)
+dim(data_filt_qc)
+
+dim(all_data_qc)
+rm(all_data_qc)
+```
+
+```{r message=FALSE, warning=FALSE}
+counts_matrix <- data_filt_qc@assays$RNA$counts
+counts_matrix@x <- counts_matrix@x /
+  rep.int(colSums(counts_matrix), diff(counts_matrix@p)) * 100
+most_expressed <- order(Matrix::rowSums(counts_matrix), decreasing = TRUE)[20:1]
+boxplot(as.matrix(t(counts_matrix[most_expressed, ])),
+        cex = 0.1, las = 1, xlab = "Percent counts per cell",
+        col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+rm(counts_matrix, most_expressed)
+```
+
+### 5. Mito/Ribo Filtering
+
+```{r message=FALSE, warning=FALSE}
+selected_mito <- WhichCells(
+  data_filt_qc,
+  slot = "counts",
+  expression = percent_mt < 5
+)
+length(selected_mito)
+
+pct_removed <- scales::percent(
+  (dim(data_filt_qc)[2] - length(selected_mito)) / dim(data_filt_qc)[2],
+  accuracy = 0.01
+)
+pct_removed
+
+data_filt_qc <- subset(data_filt_qc, cells = selected_mito)
+dim(data_filt_qc)
+
+table(data_filt_qc$orig.ident) |> sort()
+```
+
+Do not filter MT and RB genes
+
+https://www.biostars.org/p/355658/
+
+```{r message=FALSE, warning=FALSE}
+# data_filt_qc <- data_filt_qc[!grepl("^MT-", rownames(data_filt_qc)), ]
+# data_filt_qc <- data_filt_qc[!grepl("^RP[SL]", rownames(data_filt_qc)), ]
+```
+
+Violin plot after filtering
+
+```{r message=FALSE, warning=FALSE}
+vln_qc$after_sample <- 
+  VlnPlot(data_filt_qc, group.by = "orig.ident", layer = "counts",
+          features = c("nFeature_RNA", "nCount_RNA", "percent_mt",
+                       "percent_rb", "percent_hb", "percent_pt"),
+          pt.size = 0,
+          ncol = 3) + NoLegend()
+vln_qc$after_sample
+```
+
+```{r message=FALSE, warning=FALSE}
+vln_qc$after_group <- 
+  VlnPlot(data_filt_qc, group.by = "group", layer = "counts",
+          features = c("nFeature_RNA", "nCount_RNA", "percent_mt",
+                       "percent_rb", "percent_hb", "percent_pt"),
+          pt.size = 0,
+          ncol = 3) + NoLegend()
+vln_qc$after_group
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(vln_qc, file = "data/rdata/preprocess/violin_qc.qs2", nthreads = 10)
+rm(vln_qc)
+gc()
+```
+
+### (Skipped) Check Sample Sex
+
+```{r message=FALSE, warning=FALSE}
+# suppressMessages(require(biomaRt))
+# mart <- useMart("ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+# 
+# # fetch chromosome info plus some other annotations
+# genes_table <- try(biomaRt::getBM(attributes = c("ensembl_gene_id",
+#                                                  "external_gene_name",
+#                                                  "description",
+#                                                  "gene_biotype",
+#                                                  "chromosome_name",
+#                                                  "start_position"),
+#                                   mart = mart, useCache = F))
+# write_tsv(genes_table, "data/genes_table.tsv")
+# 
+# genes_table <- read_tsv("data/genes_table.tsv")
+# 
+# chrY_gene <-
+#   genes_table |>
+#   filter(!is.na(external_gene_name)) |>
+#   filter(external_gene_name %in% rownames(data_filt_qc)) |>
+#   filter(chromosome_name == "Y") |>
+#   dplyr::select(external_gene_name) |>
+#   pull
+# length(chrY_gene)
+# 
+# data_filt_qc$pct_chrY = colSums(data_filt_qc@assays$RNA$counts[chrY_gene, ]) / colSums(data_filt_qc@assays$RNA$counts)
+# 
+# VlnPlot(data_filt_qc, features = c("XIST", "pct_chrY"), layer = "counts", group.by = "patient")
+# sample_info
+```
+
+### 6. Cell Cycle Score
+
+```{r message=FALSE, warning=FALSE}
+# data_filt_qc <- qs_read("data/rdata/preprocess/data_filt_qc.qs2", nthreads = 10) # nolint
+```
+
+```{r message=FALSE, warning=FALSE}
+data_filt_qc <- NormalizeData(data_filt_qc, verbose = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+data_filt_qc <- CellCycleScoring(object = data_filt_qc,
+                                 g2m.features = cc.genes.updated.2019$g2m.genes,
+                                 s.features = cc.genes.updated.2019$s.genes)
+colnames(data_filt_qc@meta.data)[12:14] <- c("s_score", "g2m_score", "phase")
+```
+
+```{r message=FALSE, warning=FALSE}
+FeatureScatter(data_filt_qc, "s_score", "g2m_score", group.by = "phase")
+```
+
+```{r message=FALSE, warning=FALSE}
+data_filt_qc$cc_diff <- data_filt_qc$s_score - data_filt_qc$g2m_score
+VlnPlot(data_filt_qc, features = c("s_score", "g2m_score", "cc_diff"),
+        group.by = "orig.ident", ncol = 3, pt.size = 0)
+```
+
+```{r message=FALSE, warning=FALSE}
+data_filt_qc[["RNA"]]$data <- NULL
+qs_save(
+  data_filt_qc,
+  file = "data/rdata/preprocess/data_filt_qc.qs2",
+  nthreads = 10
+)
+rm(
+  data_filt_qc,
+  n_feature_sample,
+  selected_c,
+  selected_f,
+  selected_f0,
+  selected_mito
+)
+```
+
+### 7. Predict Doublets
+
+```{r message=FALSE, warning=FALSE}
+data_prep <- qs_read(
+  "data/rdata/preprocess/data_filt_qc.qs2",
+  nthreads = 10
+)
+bp_param <- SnowParam(workers = 15, RNGseed = 123)
+
+sce <- as.SingleCellExperiment(data_prep)
+sce <- scDblFinder(sce, samples = "sample", clusters = TRUE, BPPARAM = bp_param)
+
+identical(colnames(data_prep), colnames(sce))
+
+data_prep$is_doublet <- sce$scDblFinder.class
+data_prep$doublet_score <- sce$scDblFinder.score
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(
+  data_prep,
+  file = "data/rdata/preprocess/data_prep.qs2",
+  nthreads = 10
+)
+rm(sce, bp_param, data_prep)
+```
+
+### 8. Prepare Final Data
+
+```{r message=FALSE, warning=FALSE}
+data_prep <- qs_read(
+  "data/rdata/preprocess/data_prep.qs2",
+  nthreads = 10
+)
+Assays(data_prep)
+dim(data_prep)
+data_prep$doublet_score |> range()
+```
+
+```{r message=FALSE, warning=FALSE}
+doublet_fraction <-
+  (dim(data_prep)[2] - sum(data_prep$is_doublet == "singlet")) /
+  dim(data_prep)[2]
+scales::percent(doublet_fraction, accuracy = 0.01)
+```
+
+```{r message=FALSE, warning=FALSE}
+head(data_prep@meta.data)
+```
+
+```{r message=FALSE, warning=FALSE}
+data_prep <-
+  qs_read("data/rdata/preprocess/data_prep.qs2", nthreads = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+data_prep <-
+  NormalizeData(data_prep, verbose = TRUE)
+data_prep <-
+  FindVariableFeatures(data_prep, nfeatures = 3000)
+data_prep <-
+  ScaleData(data_prep) # vars.to.regress = c("nFeature_RNA", "percent_mt"))
+data_prep <-
+  RunPCA(data_prep)
+data_prep <-
+  RunUMAP(data_prep, dims = 1:30, reduction = "pca")
+```
+
+```{r message=FALSE, warning=FALSE}
+VlnPlot(
+  data_prep,
+  features = "nFeature_RNA",
+  group.by = "is_doublet",
+  pt.size = 0
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(
+  data_prep,
+  group.by = "is_doublet",
+  raster = FALSE,
+  pt.size = 0.1,
+  alpha = 0.1
+) +
+  NoAxes() +
+  theme(aspect.ratio = 1)
+```
+
+```{r message=FALSE, warning=FALSE}
+sessionInfo()
+```

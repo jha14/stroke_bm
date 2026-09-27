@@ -1,0 +1,15 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.quarto/
+Rplots.pdf
+data/
+data_backup/
+results/
+results_backup/
+codes_backup/
+celltypist/
+*.html
+*_files/
+.DS_Store

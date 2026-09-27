@@ -1,0 +1,78 @@
+---
+title: "Cell Type Prediction"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, qs2, SingleCellExperiment, zellkonverter)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+file_path <- "celltypist"
+if (!dir.exists(file_path)) {
+  dir.create(file_path, recursive = TRUE)
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  qs_read(
+    "data/rdata/dim_reduction/seurat_object_clustered.qs2",
+    nthreads = 10
+  )
+
+DefaultAssay(seurat_object)
+Layers(seurat_object)
+```
+
+```{r message=FALSE, warning=FALSE}
+# seurat_object <-
+#   seurat_object |>
+#   JoinLayers()
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object[["RNA"]]$counts <-
+  as(seurat_object[["RNA"]]$counts, Class = "dgCMatrix")
+seurat_object[["RNA"]]$data <- NULL
+seurat_object[["RNA"]]$scale.data <- NULL
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- as.SingleCellExperiment(seurat_object, assay = c("RNA"))
+```
+
+```{r message=FALSE, warning=FALSE}
+writeH5AD(
+  seurat_object,
+  "celltypist/seurat_object.h5ad",
+  X_name = "counts"
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+sessionInfo()
+```

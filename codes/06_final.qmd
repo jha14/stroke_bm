@@ -1,0 +1,485 @@
+---
+title: "Merge subtypes into final object"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+从 05 各 lineage 的 `annot_subtype` 拼出最终对象。Level-1 / Level-2 分别是 `annot_main` / `annot_sub`。`seurat_object_first_annot.qs2` 只提供 counts 和 QC 元数据，粗标 `annot` 留作对照，不用于后续分析。细胞集合变了，HVG / PCA / Harmony / UMAP 必须重做。不重新聚类。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, SCpubr, ggh4x)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+source("codes/plot_colors.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/final"
+obj_path <- "data/rdata"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+alpha <- .35
+pt_size <- .1
+raster <- FALSE
+raster_dpi <- c(3000, 3000)
+n_hvg <- 3000
+```
+
+### 1. Collect subtype labels
+
+```{r message=FALSE, warning=FALSE}
+subtype_files <- c(
+  hspc = "seurat_object_hspc.qs2",
+  b_plasma = "seurat_object_b_plasma.qs2",
+  tnk = "seurat_object_tnk.qs2",
+  myeloid = "seurat_object_myeloid.qs2",
+  neutrophil = "seurat_object_neutrophil.qs2",
+  erythrocyte = "seurat_object_erythrocyte.qs2"
+)
+
+subtype_to_main <- c(
+  HSC = "HSPC",
+  MEP = "HSPC",
+  GMP = "HSPC",
+  MDP = "HSPC",
+  "Pro-B" = "B",
+  "Large Pre-B" = "B",
+  "Small Pre-B" = "B",
+  "Trans B" = "B",
+  "Naive B" = "B",
+  "Memory B" = "B",
+  Plasma = "Plasma",
+  "CD4 Tnaive" = "T",
+  "CD4 Tcm" = "T",
+  "CD4 Treg" = "T",
+  "CD8 Tnaive" = "T",
+  "CD8 Tem" = "T",
+  "CD8 CTL" = "T",
+  "CD8 NKT" = "T",
+  MAIT = "T",
+  gdT = "T",
+  "CD56bright NK" = "NK",
+  "CD56dim NK" = "NK",
+  "CD14 Mono" = "Mono/DC",
+  "CD16 Mono" = "Mono/DC",
+  cDC2 = "Mono/DC",
+  pDC = "pDC",
+  Promyelocyte = "Pre-Neut",
+  "Pre-Neut" = "Pre-Neut",
+  "MMP8 Pre-Neut" = "Pre-Neut",
+  "MMP9 Pre-Neut" = "Pre-Neut",
+  "S100A12 Neut" = "Neut",
+  "SLC8A1 Neut" = "Neut",
+  "ISG15 Neut" = "Neut",
+  "Early Ery" = "Ery",
+  "Late Ery" = "Ery"
+)
+
+annot_main_levels <- c(
+  "HSPC", "B", "Plasma", "T", "NK",
+  "Mono/DC", "pDC", "Pre-Neut", "Neut", "Ery"
+)
+annot_sub_levels <- names(subtype_to_main)
+
+label_tbl <- purrr::imap_dfr(subtype_files, function(file, lineage) {
+  obj <- qs_read(file.path("data/rdata/subtype", file), nthreads = 10)
+  stopifnot("annot_subtype" %in% colnames(obj[[]]))
+  out <- tibble(
+    barcode = colnames(obj),
+    lineage = lineage,
+    annot_sub = as.character(obj$annot_subtype)
+  )
+  rm(obj)
+  gc()
+  out
+})
+
+n_na <- sum(is.na(label_tbl$annot_sub) | label_tbl$annot_sub == "")
+n_dup <- sum(duplicated(label_tbl$barcode))
+unknown <- setdiff(unique(label_tbl$annot_sub), names(subtype_to_main))
+if (n_na > 0) stop(sprintf("%s cells have empty annot_sub.", n_na))
+if (n_dup > 0) {
+  stop(sprintf("%s barcodes appear in more than one subtype object.", n_dup))
+}
+if (length(unknown) > 0) {
+  stop(sprintf("Unmapped annot_sub: %s", paste(unknown, collapse = ", ")))
+}
+
+label_tbl$annot_main <- unname(subtype_to_main[label_tbl$annot_sub])
+print(table(label_tbl$lineage))
+print(table(label_tbl$annot_main, useNA = "ifany"))
+print(table(label_tbl$annot_sub, useNA = "ifany"))
+```
+
+### 2. Subset first-annot object
+
+`first_annot` 的粗标保存在 `annot`，不覆盖。05 丢掉的细胞不会进最终对象。
+
+```{r message=FALSE, warning=FALSE}
+test_genes <- qs_read("data/rdata/test_genes.qs2", nthreads = 10)
+seurat_object <- qs_read(
+  "data/rdata/seurat_object_first_annot.qs2",
+  nthreads = 10
+)
+n_parent <- ncol(seurat_object)
+missing_parent <- setdiff(label_tbl$barcode, colnames(seurat_object))
+if (length(missing_parent) > 0) {
+  stop(sprintf(
+    "%s subtype barcodes are not in first_annot.",
+    length(missing_parent)
+  ))
+}
+dropped_cleanup <- setdiff(colnames(seurat_object), label_tbl$barcode)
+message(sprintf(
+  "first_annot %s cells; keep %s from subtypes; drop %s not in any 05 object.",
+  n_parent, nrow(label_tbl), length(dropped_cleanup)
+))
+
+seurat_object <- subset(seurat_object, cells = label_tbl$barcode)
+label_tbl <- label_tbl[match(colnames(seurat_object), label_tbl$barcode), ]
+stopifnot(identical(colnames(seurat_object), label_tbl$barcode))
+
+seurat_object$lineage <- label_tbl$lineage
+seurat_object$annot_sub <- factor(
+  label_tbl$annot_sub,
+  levels = intersect(annot_sub_levels, unique(label_tbl$annot_sub))
+)
+seurat_object$annot_main <- factor(
+  label_tbl$annot_main,
+  levels = intersect(annot_main_levels, unique(label_tbl$annot_main))
+)
+
+print(table(first = seurat_object$annot, main = seurat_object$annot_main))
+print(table(seurat_object$annot_main, seurat_object$sample))
+```
+
+```{r message=FALSE, warning=FALSE}
+if ("umap_harmony" %in% Reductions(seurat_object)) {
+  seurat_object[["umap_first"]] <- seurat_object[["umap_harmony"]]
+}
+if (length(Layers(seurat_object, search = "counts")) > 1) {
+  seurat_object <- JoinLayers(seurat_object)
+}
+seurat_object[["RNA"]]$data <- NULL
+seurat_object[["RNA"]]$scale.data <- NULL
+DefaultLayer(seurat_object@assays$RNA)
+Layers(seurat_object)
+```
+
+### 3. Normalize, HVG, Scale, PCA
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+seurat_object <- FindVariableFeatures(
+  seurat_object, nfeatures = n_hvg, verbose = TRUE
+)
+head(VariableFeatures(seurat_object), 20)
+```
+
+```{r message=FALSE, warning=FALSE}
+pca_features <- setdiff(
+  VariableFeatures(seurat_object),
+  test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+)
+sum(VariableFeatures(seurat_object) %in%
+  test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr])
+seurat_object <- ScaleData(
+  seurat_object, features = pca_features, assay = "RNA"
+)
+seurat_object <- RunPCA(
+  seurat_object, npcs = 50, features = pca_features,
+  verbose = TRUE, reduction.name = "pca"
+)
+ElbowPlot(seurat_object, reduction = "pca", ndims = 50)
+```
+
+### 4. Harmony
+
+```{r message=FALSE, warning=FALSE}
+tic("Harmony integration")
+seurat_object <- RunHarmony(
+  seurat_object, c("sample"), ncores = 15, plot_convergence = TRUE
+)
+toc()
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap <- function(obj, dims, file) {
+  umap_temp <- RunUMAP(
+    obj, dims = 1:dims, reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+  p <- plot_grid(
+    ncol = 2,
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "annot_main",
+      cols = annot_main_col, label = TRUE,
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1),
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "annot_sub",
+      cols = annot_sub_col, label = TRUE, label.size = 3,
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1),
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "sample",
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1),
+    DimPlot(
+      umap_temp, reduction = "umap_harmony", group.by = "group",
+      cols = group_col,
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1)
+  )
+  ggsave(file, plot = p, width = 16, height = 14, dpi = 600)
+  p
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap(seurat_object, 20, file.path(res_path, "01_dim_umap20.pdf"))
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap(seurat_object, 30, file.path(res_path, "01_dim_umap30.pdf"))
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_harmony_umap(seurat_object, 40, file.path(res_path, "01_dim_umap40.pdf"))
+```
+
+```{r message=FALSE, warning=FALSE}
+# 看过 20/30/40 后改这里。01 全局对象用 30；05 亚型官方 UMAP 用 20。
+n_dims <- 20
+seurat_object <- RunUMAP(
+  seurat_object, dims = 1:n_dims, reduction = "harmony",
+  reduction.name = "umap"
+)
+```
+
+### 5. Annotation UMAPs
+
+短坐标轴同 `summary.qmd`。颜色来自 `codes/plot_colors.R`。
+
+```{r message=FALSE, warning=FALSE}
+plot_umap_short(
+  seurat_object, group.by = "annot_main", cols = annot_main_col,
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+  label = TRUE, label.size = 5
+)
+ggsave(
+  file.path(res_path, "02_annot_main.pdf"),
+  width = 8, height = 8, dpi = 600
+)
+ggsave(
+  file.path(res_path, "02_annot_main.png"),
+  width = 8, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_umap_short(
+  seurat_object, group.by = "annot_sub", cols = annot_sub_col,
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+  label = TRUE, label.size = 3, legend = TRUE
+)
+ggsave(
+  file.path(res_path, "02_annot_sub.pdf"),
+  width = 11, height = 8, dpi = 600
+)
+ggsave(
+  file.path(res_path, "02_annot_sub.png"),
+  width = 11, height = 8, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+p_main_group <- list(
+  plot_umap_short(
+    subset(seurat_object, group == "CTRL"),
+    group.by = "annot_main", cols = annot_main_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, title = "CTRL"
+  ),
+  plot_umap_short(
+    subset(seurat_object, group == "ACI"),
+    group.by = "annot_main", cols = annot_main_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, title = "ACI"
+  )
+)
+plot_grid(plotlist = p_main_group, ncol = 2)
+ggsave(
+  file.path(res_path, "02_annot_main_group.pdf"),
+  width = 15, height = 8, units = "in", dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+p_sub_group <- list(
+  plot_umap_short(
+    subset(seurat_object, group == "CTRL"),
+    group.by = "annot_sub", cols = annot_sub_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, title = "CTRL"
+  ),
+  plot_umap_short(
+    subset(seurat_object, group == "ACI"),
+    group.by = "annot_sub", cols = annot_sub_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, title = "ACI"
+  )
+)
+plot_grid(plotlist = p_sub_group, ncol = 2)
+ggsave(
+  file.path(res_path, "02_annot_sub_group.pdf"),
+  width = 15, height = 8, units = "in", dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  plot_umap_short(
+    seurat_object, group.by = "annot_main", cols = annot_main_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = TRUE, label.size = 4
+  ),
+  plot_umap_short(
+    seurat_object, group.by = "annot_sub", cols = annot_sub_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = TRUE, label.size = 3
+  ),
+  plot_umap_short(
+    seurat_object, group.by = "sample", cols = NULL,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, legend = TRUE
+  ),
+  plot_umap_short(
+    seurat_object, group.by = "group", cols = group_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, legend = TRUE
+  )
+)
+ggsave(
+  file.path(res_path, "02_annot_overview.pdf"),
+  width = 16, height = 14, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+if ("umap_first" %in% Reductions(seurat_object)) {
+  plot_grid(
+    ncol = 2,
+    plot_umap_short(
+      seurat_object, reduction = "umap_first", group.by = "annot",
+      cols = NULL,
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+      label = TRUE, title = "first annot (old UMAP)"
+    ),
+    plot_umap_short(
+      seurat_object, reduction = "umap_first", group.by = "annot_main",
+      cols = annot_main_col,
+      pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+      label = TRUE, title = "annot_main on old UMAP"
+    )
+  )
+  ggsave(
+    file.path(res_path, "02_annot_first_umap.pdf"),
+    width = 16, height = 8, dpi = 600
+  )
+}
+```
+
+### 6. Marker DotPlots
+
+```{r message=FALSE, warning=FALSE}
+marker_groups_main <- list(
+  HSPC = c("CD34", "SPINK2", "AVP"),
+  B = c("MS4A1", "CD79A"),
+  Plasma = c("JCHAIN", "MZB1"),
+  T = c("CD3D", "CD4", "CD8A", "IL7R"),
+  NK = c("NKG7", "GNLY", "KLRF1"),
+  `Mono/DC` = c("CD14", "FCN1", "LYZ", "CD1C"),
+  pDC = c("CLEC4C", "LILRA4"),
+  `Pre-Neut` = c("AZU1", "MPO", "LTF", "CAMP"),
+  Neut = c("FCGR3B", "CSF3R", "NAMPT"),
+  Ery = c("CA1", "HBD", "GYPA")
+)
+
+Idents(seurat_object) <- "annot_main"
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_groups_main,
+  legend.length = 10
+)
+ggsave(
+  file.path(res_path, "03_markers_main.pdf"),
+  width = 12, height = 5, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "annot_sub"
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_groups_main,
+  legend.length = 10
+)
+ggsave(
+  file.path(res_path, "03_markers_sub.pdf"),
+  width = 12, height = 10, dpi = 600
+)
+```
+
+### 7. Save
+
+后续分析读 `seurat_object_final.qs2`，用 `annot_main`（level-1）/ `annot_sub`（level-2）。官方 UMAP 是 `umap`（dims `n_dims`）。`annot` 和 `umap_first` 只作对照。
+
+```{r message=FALSE, warning=FALSE}
+Idents(seurat_object) <- "annot_main"
+qs_save(
+  seurat_object,
+  file = file.path(obj_path, "seurat_object_final.qs2"),
+  nthreads = 10
+)
+dim(seurat_object)
+table(seurat_object$annot_main, useNA = "ifany")
+```
+
+```{r message=FALSE, warning=FALSE}
+sessionInfo()
+```

@@ -1,0 +1,173 @@
+
+```{r message=FALSE, warning=FALSE}
+marker_features <-
+  list("HSPC" = c("CD34", "AZU1", "MPO", "LTF", "CAMP"),
+       "B cell" = c("MS4A1", "CD79A"),
+       "Plasma cell" = c("JCHAIN", "MZB1"),
+       "Neutrophil" = c("NAMPT", "CSF3R", "FCGR3B"),
+       "Mono/Macro/DC" = c("CD14", "FCN1", "LYZ", "CD68",
+                           "CLEC9A", "XCR1", "BATF3", # cDC1
+                           "CD1C", "FCER1A", "CLEC10A"),
+       "pDC" = c("CLEC4C", "IL3RA", "LILRA4", "GZMB"),
+       "T cell" = c("CD3D", "CD3E", "CD4", "CD8A", "IL7R", "TCF7"),
+       "NK cell" = c("NKG7", "GNLY", "FGFBP2", "KLRD1", "KLRF1"),
+       "Erythrocyte" = c("CA1", "HBD"))
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  qs_read(
+    "data/rdata/final/seurat_object_first_annot.qs2",
+    nthreads = 10
+  )
+
+Idents(seurat_object) <-
+  factor(seurat_object$annot, levels = names(sc_cell_col))
+do_DotPlot(
+  sample = seurat_object,
+  flip = FALSE,
+  legend.title = "Average Expression",
+  legend.title.face = "plain",
+  features = marker_features,
+  legend.length = 10
+)
+ggsave("results/figures/marker_dotplot.pdf",
+       width = 10, height = 4.5, units = "in", dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+axis <-
+  ggh4x::guide_axis_truncated(
+    trunc_lower = unit(0, "npc"),
+    trunc_upper = unit(5, "cm")
+  )
+
+DimPlot(seurat_object, reduction = "umap_harmony", group.by = "annot",
+        cols = sc_cell_col,
+        pt.size = .1, alpha = .1, raster = FALSE,
+        label = TRUE, label.size = 10) +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_blank(),
+    axis.line = element_line(
+      arrow = arrow(type = "closed", length = unit(0.40, "cm")),
+      linewidth = 1, length = unit(5, "cm")
+    ),
+    axis.title = element_text(size = 20, hjust = 0.06)
+  ) +
+  xlab("UMAP-1") + ylab("UMAP-2") +
+  scale_x_continuous(breaks = NULL) +
+  scale_y_continuous(breaks = NULL) +
+  guides(color = FALSE, x = axis, y = axis)
+ggsave("results/figures/umap_all_cells.pdf", width = 8, height = 8, dpi = 600)
+ggsave("results/figures/umap_all_cells.png", width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+p <- list()
+
+p[[1]] <-
+  DimPlot(
+    seurat_object |> subset(group == "CTRL"),
+    reduction = "umap_harmony", group.by = "annot",
+    cols = sc_cell_col,
+    pt.size = .1, alpha = .1, raster = FALSE,
+    label = FALSE, label.size = 10
+  ) +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(size = 30),
+    axis.line = element_line(
+      arrow = arrow(type = "closed", length = unit(0.40, "cm")),
+      linewidth = 1,
+      length = unit(5, "cm")
+    ),
+    axis.title = element_text(size = 20, hjust = 0.06)
+  ) +
+  xlab("UMAP-1") + ylab("UMAP-2") +
+  scale_x_continuous(breaks = NULL) +
+  scale_y_continuous(breaks = NULL) +
+  guides(color = FALSE, x = axis, y = axis)
+
+p[[2]] <-
+  DimPlot(
+    seurat_object |> subset(group == "ACI"),
+    reduction = "umap_harmony", group.by = "annot",
+    cols = sc_cell_col,
+    pt.size = .1, alpha = .1, raster = FALSE,
+    label = FALSE, label.size = 10
+  ) +
+  ggtitle("ACI") +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(size = 30),
+    axis.line = element_line(
+      arrow = arrow(type = "closed", length = unit(0.40, "cm")),
+      linewidth = 1,
+      length = unit(5, "cm")
+    ),
+    axis.title = element_text(size = 20, hjust = 0.06)
+  ) +
+  xlab("UMAP-1") + ylab("UMAP-2") +
+  scale_x_continuous(breaks = NULL) +
+  scale_y_continuous(breaks = NULL) +
+  guides(color = FALSE, x = axis, y = axis)
+
+p[[1]] <- p[[1]] + ggtitle("CTRL")
+p[[2]] <- p[[2]] + ggtitle("ACI")
+
+plot_grid(plotlist = p, ncol = 2)
+ggsave("results/figures/umap_group.pdf",
+       width = 15, height = 8, units = "in", dpi = 600)
+ggsave("results/figures/umap_group.png",
+       width = 15, height = 8, units = "in", dpi = 300)
+```
+
+```{r message=FALSE, warning=FALSE}
+CellDimPlot(
+  seurat_object,
+  group.by = "annot",
+  reduction = "umap_harmony",
+  theme_use = "theme_blank",
+  xlab = "UMAP-1",
+  ylab = "UMAP-2",
+  raster = FALSE,
+  label = TRUE,
+  label.size = 7,
+  pt.size = 1,
+  pt.alpha = .5,
+  label.fg = "#DDDDDD",
+  label_insitu = TRUE,
+  aspect.ratio = 1,
+  hex = TRUE,
+  hex.bins = 75,
+  legend.position = "none"
+)
+ggsave("results/figures/umap_all_cells1.pdf", width = 8, height = 8, dpi = 600)
+ggsave("results/figures/umap_all_cells1.png", width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+CellDimPlot(
+  seurat_object,
+  group.by = "annot",
+  split.by = "group",
+  reduction = "umap_harmony",
+  theme_use = "theme_blank",
+  xlab = "UMAP-1",
+  ylab = "UMAP-2",
+  raster = FALSE,
+  label = TRUE,
+  label.size = 7,
+  pt.size = 1,
+  pt.alpha = .5,
+  label.fg = "#DDDDDD",
+  label_insitu = TRUE,
+  aspect.ratio = 1,
+  hex = TRUE,
+  hex.bins = 75,
+  legend.position = "none"
+)
+ggsave("results/figures/umap_group1.pdf", width = 16, height = 8, dpi = 600)
+ggsave("results/figures/umap_group1.png", width = 16, height = 8, dpi = 600)
+```

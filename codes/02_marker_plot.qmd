@@ -1,0 +1,400 @@
+---
+title: "Marker Plot"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, qs2, cowplot)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/marker_umap"
+if (!dir.exists(res_path)) {
+  dir.create(res_path, recursive = TRUE)
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+alpha <- .03
+pt_size <- .03
+raster <- FALSE
+raster_dpi <- c(3000, 3000)
+min_cutoff <- "q10"
+max_cutoff <- "q90"
+```
+
+### 1. Marker Plot
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  qs_read(
+    "data/rdata/dim_reduction/seurat_object_clustered.qs2",
+    nthreads = 10
+  )
+DefaultAssay(seurat_object)
+Layers(seurat_object)
+```
+
+#### HSC
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD34", "PROM1", "SPINK2", "AVP", "CRHBP", "HLF"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("HSC", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### CMP
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("PRSS57", "FLT3", "RNASE2",
+               "CD34", "IL3RA", "KIT",
+               "SPI1", "MYB", "GATA1"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("CMP", ".pdf")),
+  width = 18, height = 15
+)
+```
+
+#### MDP
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CSF1R", "KLF4", "SAMHD1", "LGALS1", "LSP1", "FLT3"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("MDP", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### MP
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CEBPD", "VCAN", "CD36", "FCGR1A", "CSF1R", "CD14"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("MP", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### CLP
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("IL7R", "FLT3", "DNTT", "MME", "SPINK2"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("CLP", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### Pro-B
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD34", "VPREB1", "IGLL1", "EBF1", "PAX5", "DNTT"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("ProB", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### Large Pre-B
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("VPREB1", "IGLL1", "CD19", "MKI67", "TOP2A", "PCNA"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Large_PreB", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### Small Pre-B
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 2,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("RAG1", "RAG2", "CD19", "CD38"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Small_PreB", ".pdf")),
+  width = 12, height = 10
+)
+```
+
+#### GMP
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("AZU1", "MPO", "ELANE", "CTSG", "PRTN3", "CSF3R"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("GMP", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### Promyelocyte
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("DEFA1", "DEFA3", "DEFA4",
+               "AZU1", "MPO", "ELANE", "CTSG", "PRTN3"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Promyelocyte", ".pdf")),
+  width = 18, height = 15
+)
+```
+
+#### NP
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("LTF", "LCN2", "CAMP", "MNDA", "RETN", "FCGR3B"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("NP", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### Neutrophil
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 2,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("NAMPT", "CSF3R", "S100A8", "S100A9"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Neutrophil", ".pdf")),
+  width = 12, height = 10
+)
+```
+
+#### Monocyte
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD14", "CD68", "VCAN", "LYZ", "FCGR3A"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Monocyte", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### Macrophage
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 2,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD68", "C1QA", "C1QB", "C1QC"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Macrophage", ".pdf")),
+  width = 12, height = 10
+)
+```
+
+#### DC
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CLEC9A", "XCR1", "BATF3", # cDC1
+               "CD1C", "FCER1A", "CLEC10A", # cDC2
+               "CCR7", "LAMP3", "CCL19"), # migDC
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("DC", ".pdf")),
+  width = 18, height = 15
+)
+```
+
+#### pDC
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 2,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CLEC4C", "IL3RA", "LILRA4", "GZMB"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("pDC", ".pdf")),
+  width = 12, height = 10
+)
+```
+
+#### T cell
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD3D", "CD3E", "CD3G", "CD4", "CD8A", "CD8B"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("T_cell", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### B cell
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 2,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD79A", "CD79B", "CD19", "MS4A1"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("B_cell", ".pdf")),
+  width = 12, height = 10
+)
+```
+
+#### Plasma cell
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 2,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("MZB1", "SDC1", "JCHAIN", "IGHG1"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Plasma_cell", ".pdf")),
+  width = 12, height = 10
+)
+```
+
+#### NK cell
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 3,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("KLRD1", "NCAM1", "XCL1", "CCL5", "NKG7", "GNLY"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("NK_cell", ".pdf")),
+  width = 18, height = 10
+)
+```
+
+#### Erythrocyte
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 4,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("CD36", "GYPA", "AHSP", "CA1",
+               "HBB", "HBA1", "HBA2", "ALAS2",
+               "SLC4A1", "TFRC", "KLF1", "GATA1"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Erythrocyte", ".pdf")),
+  width = 24, height = 15
+)
+```
+
+#### Megakaryocyte
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap_harmony", ncol = 2,
+  min.cutoff = min_cutoff, max.cutoff = max_cutoff,
+  features = c("GP9", "PPBP", "PF4", "PECAM1"),
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+)
+ggsave(
+  file.path(res_path, paste0("Megakaryocyte", ".pdf")),
+  width = 12, height = 10
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+sessionInfo()
+```

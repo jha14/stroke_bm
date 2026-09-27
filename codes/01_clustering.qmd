@@ -1,0 +1,866 @@
+---
+title: "Clustering"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/functions.R")
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/dim_reduction"
+obj_path <- "data/rdata/dim_reduction"
+if (!dir.exists(res_path)) dir.create(res_path, recursive = TRUE)
+if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+alpha <- .1
+pt_size <- .1
+raster <- FALSE
+raster_dpi <- c(3000, 3000)
+min_cutoff <- "q10"
+max_cutoff <- "q90"
+```
+
+### 0. Load Gene Info
+
+```{r message=FALSE, warning=FALSE}
+genes_type <- 
+  read_tsv("data/tx_to_genes_cr_2024a.txt") |>
+  dplyr::select(gene_symbol, gene_type) |>
+  distinct() |>
+  arrange(desc(gene_type)) |>
+  filter(!duplicated(gene_symbol))
+
+dim(genes_type)
+table(genes_type$gene_type)
+```
+
+### 1. data Preparation
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- qs_read("data/rdata/preprocess/data_prep.qs2", nthreads = 10)
+DefaultAssay(seurat_object)
+Layers(seurat_object)
+```
+
+定义要排除的模式
+
+1.  MT-: 线粒体
+
+2.  RP\[SL\]: 核糖体
+
+3.  HSP: 热休克蛋白 (应激)
+
+4.  DNAJ: HSP伴侣 (应激)
+
+5.  HIST: 组蛋白 (细胞周期)
+
+6.  JUN\|FOS\|ZFP36: 早期即刻基因 (解离应激)
+
+```{r message=FALSE, warning=FALSE}
+test_genes <-
+  tibble(gene = rownames(seurat_object)) |>
+  left_join(
+    genes_type |>
+      dplyr::rename(gene = gene_symbol)
+  ) |>
+  mutate(
+    unwant = grepl("^MT-|^RP[SL]|^HSP|^DNAJ|^HIST|^ZFP36", gene),
+    #  unwant = grepl("^MT-|^RP[SL]", gene),
+    ig = grepl("IG", gene_type),
+    tr = grepl("TR", gene_type)
+  )
+sum(test_genes$unwant)
+sum(test_genes$ig)
+sum(test_genes$tr)
+
+qs_save(test_genes, "data/rdata/test_genes.qs2", nthreads = 10)
+```
+
+### 2. Without Integration
+
+```{r message=FALSE, warning=FALSE}
+Layers(seurat_object)
+Layers(seurat_object) |> length()
+
+# seurat_object <- 
+#   split(seurat_object, f = seurat_object$sample)
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+Layers(seurat_object)
+Layers(seurat_object) |> length()
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  FindVariableFeatures(
+    seurat_object,
+    verbose = TRUE,
+    nfeatures = 3000
+)
+head(VariableFeatures(seurat_object), 20)
+Layers(seurat_object)
+Layers(seurat_object) |> length()
+LabelPoints(
+  plot = VariableFeaturePlot(seurat_object),
+  points = head(VariableFeatures(seurat_object), 20),
+  repel = TRUE
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+sum(VariableFeatures(seurat_object) %in% test_genes$gene[test_genes$unwant])
+sum(
+  VariableFeatures(seurat_object) %in%
+    test_genes$gene[test_genes$ig | test_genes$tr]
+)
+seurat_object <-
+  ScaleData(
+    seurat_object,
+    features = setdiff(
+      VariableFeatures(seurat_object),
+      test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+    ),
+    assay = "RNA"
+  )
+```
+
+```{r message=FALSE, warning=FALSE}
+# pca without integration
+seurat_object <-
+  RunPCA(
+    seurat_object,
+    npcs = 50,
+    features = setdiff(
+      VariableFeatures(seurat_object),
+      test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+    ),
+    verbose = TRUE,
+    reduction.name = "pca"
+  )
+```
+
+Number of PCs
+
+https://hbctraining.github.io/scRNA-seq/lessons/elbow_plot_metric.html
+
+https://www.jianshu.com/p/feac6263faee
+
+```{r message=FALSE, warning=FALSE}
+num_pcs <- list()
+num_pcs$pct <-
+  seurat_object[["pca"]]@stdev / sum(seurat_object[["pca"]]@stdev) * 100
+num_pcs$cumu <- cumsum(num_pcs$pct)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Determine which PC exhibits cumulative percent greater than 80% and % variation associated with the PC as less than 5
+num_pcs$co1 <- which(num_pcs$cumu > 80 & num_pcs$pct < 5)[1]
+num_pcs$co1
+```
+
+```{r message=FALSE, warning=FALSE}
+# last point where change of % of variation is more than 0.1%.
+num_pcs$co2 <- sort(
+  which(
+    (num_pcs$pct[seq_along(num_pcs$pct)[-length(num_pcs$pct)]] -
+      num_pcs$pct[seq_along(num_pcs$pct)[-1]]) > 0.1
+  ),
+  decreasing = TRUE
+)[1] + 1
+num_pcs$co2
+
+num_pcs$pcs <- min(num_pcs$co1, num_pcs$co2)
+num_pcs$pcs
+```
+
+```{r message=FALSE, warning=FALSE}
+ElbowPlot(seurat_object, reduction = "pca", ndims = 50)
+
+ElbowPlot(seurat_object, ndims = 50)$data |> ggplot() +
+  geom_point(aes(x = dims, y = stdev)) +
+  geom_vline(xintercept = num_pcs$pcs, color = "red") +
+  theme_bw() + labs(title = "Elbow plot: quantitative approach")
+
+
+num_pcs$plot_df <- data.frame(pct = num_pcs$pct,
+                              cumu = num_pcs$cumu,
+                              rank = seq_along(num_pcs$pct))
+
+# Elbow plot to visualize
+ggplot(num_pcs$plot_df,
+       aes(cumu, pct, label = rank, color = rank > num_pcs$pcs)) +
+  geom_text() +
+  geom_vline(xintercept = 90, color = "grey") +
+  geom_hline(yintercept = min(num_pcs$pct[num_pcs$pct > 5]), color = "grey") +
+  theme_bw()
+```
+
+### 3. Dimentionality Reduction without Integration
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  RunUMAP(
+    seurat_object,
+    dims = 1:30,
+    reduction = "pca",
+    reduction.name = "umap_unint"
+  )
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    seurat_object,
+    reduction = "umap_unint",
+    group.by = "sample",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_unint",
+    group.by = "group",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_unint",
+    group.by = "phase",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_unint",
+    group.by = "is_doublet",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave("results/dim_reduction/umap_unint_30.pdf",
+       width = 14, height = 12, dpi = 600)
+```
+
+### 4. With integration
+
+```{r message=FALSE, warning=FALSE}
+tic("Harmony integration")
+seurat_object <-
+  RunHarmony(
+    seurat_object,
+    c("sample"),
+    ncores = 15,
+    plot_convergence = TRUE
+  )
+toc()
+```
+
+```{r message=FALSE, warning=FALSE}
+num_pcs <- list()
+num_pcs$pct <-
+  seurat_object[["harmony"]]@stdev /
+  sum(seurat_object[["harmony"]]@stdev) * 100
+num_pcs$cumu <- cumsum(num_pcs$pct)
+num_pcs$co1 <- which(num_pcs$cumu > 90 & num_pcs$pct < 5)[1]
+num_pcs$co1
+
+num_pcs$co2 <- sort(
+  which(
+    (num_pcs$pct[seq_along(num_pcs$pct)[-length(num_pcs$pct)]] -
+      num_pcs$pct[seq_along(num_pcs$pct)[-1]]) > 0.1
+  ),
+  decreasing = TRUE
+)[1] + 1
+num_pcs$co2
+```
+
+```{r message=FALSE, warning=FALSE}
+umap_temp <-
+  RunUMAP(
+    seurat_object,
+    dims = 1:20,
+    reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "sample",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "group",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "phase",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "is_doublet",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  "results/dim_reduction/umap_harmony_20.pdf",
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+umap_temp <-
+  RunUMAP(
+    seurat_object,
+    dims = 1:25,
+    reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "sample",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "group",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "phase",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "is_doublet",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  "results/dim_reduction/umap_harmony_25.pdf",
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+umap_temp <-
+  RunUMAP(
+    seurat_object,
+    dims = 1:30,
+    reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "sample",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "group",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "phase",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "is_doublet",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  "results/dim_reduction/umap_harmony_30.pdf",
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+umap_temp <-
+  RunUMAP(
+    seurat_object,
+    dims = 1:35,
+    reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "sample",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "group",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "phase",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "is_doublet",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  "results/dim_reduction/umap_harmony_35.pdf",
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+umap_temp <-
+  RunUMAP(
+    seurat_object,
+    dims = 1:40,
+    reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "sample",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "group",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "phase",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    umap_temp,
+    reduction = "umap_harmony",
+    group.by = "is_doublet",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  "results/dim_reduction/umap_harmony_40.pdf",
+  width = 14, height = 12, dpi = 600
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(
+  seurat_object,
+  file = "data/rdata/dim_reduction/seurat_object_harmony.qs2",
+  nthreads = 10
+)
+rm(seurat_object, umap_temp)
+```
+
+### 5. Visualization of Integration
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  qs_read(
+    "data/rdata/dim_reduction/seurat_object_harmony.qs2",
+    nthreads = 10
+  )
+```
+
+```{r message=FALSE, warning=FALSE}
+n_dims <- 30
+set.seed(123)
+seurat_object <-
+  RunUMAP(
+    seurat_object,
+    dims = 1:n_dims,
+    reduction = "harmony",
+    reduction.name = "umap_harmony"
+  )
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "sample",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "group",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "phase",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "is_doublet",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(
+  paste0("results/dim_reduction/umap_harmony_", n_dims, ".pdf"),
+  width = 14,
+  height = 12,
+  dpi = 600
+)
+```
+
+
+### 6. Level 1 Clustering
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <-
+  FindNeighbors(
+    object = seurat_object,
+    reduction = "harmony",
+    dims = 1:n_dims
+  )
+```
+
+```{r message=FALSE, warning=FALSE}
+for (res in c(0.1, 0.2, 0.5, 1, 1.5, 2)) {
+  print(res)
+  set.seed(123)
+  seurat_object <-
+    FindClusters(
+      seurat_object,
+      cluster.name = paste0("harmony_clusters_", res),
+      resolution = res,
+      algorithm = 4
+    )
+  gc()
+}
+gc()
+```
+
+```{r message=FALSE, warning=FALSE}
+gc()
+qs_save(seurat_object,
+        file = "data/rdata/dim_reduction/seurat_object_clustered.qs2",
+        nthreads = 10)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 3,
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_0.1",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_0.2",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_0.5",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_1",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_1.5",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object,
+    reduction = "umap_harmony",
+    group.by = "harmony_clusters_2",
+    pt.size = pt_size,
+    alpha = alpha,
+    raster = raster,
+    raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave("results/dim_reduction/umap_harmony_clusters.pdf",
+       width = 21, height = 12, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(seurat_object,
+        reduction = "umap_harmony",
+        group.by = "harmony_clusters_0.1",
+        pt.size = pt_size,
+        alpha = alpha,
+        raster = raster,
+        raster.dpi = raster_dpi,
+        label = TRUE) +
+  theme(aspect.ratio = 1)
+ggsave("results/dim_reduction/umap_harmony_clusters_0.1.pdf",
+       width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(seurat_object,
+        reduction = "umap_harmony",
+        group.by = "harmony_clusters_0.2",
+        pt.size = pt_size,
+        alpha = alpha,
+        raster = raster,
+        raster.dpi = raster_dpi,
+        label = TRUE) +
+  theme(aspect.ratio = 1)
+ggsave("results/dim_reduction/umap_harmony_clusters_0.2.pdf",
+       width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(seurat_object,
+        reduction = "umap_harmony",
+        group.by = "harmony_clusters_0.5",
+        pt.size = pt_size,
+        alpha = alpha,
+        raster = raster,
+        raster.dpi = raster_dpi,
+        label = TRUE) +
+  theme(aspect.ratio = 1)
+ggsave("results/dim_reduction/umap_harmony_clusters_0.5.pdf",
+       width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(seurat_object,
+        reduction = "umap_harmony",
+        group.by = "harmony_clusters_1",
+        pt.size = pt_size,
+        alpha = alpha,
+        raster = raster,
+        raster.dpi = raster_dpi,
+        label = TRUE) +
+  theme(aspect.ratio = 1)
+ggsave("results/dim_reduction/umap_harmony_clusters_1.pdf",
+       width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(seurat_object,
+        reduction = "umap_harmony",
+        group.by = "harmony_clusters_1.5",
+        pt.size = pt_size,
+        alpha = alpha,
+        raster = raster,
+        raster.dpi = raster_dpi,
+        label = TRUE) +
+  theme(aspect.ratio = 1)
+ggsave("results/dim_reduction/umap_harmony_clusters_1.5.pdf",
+       width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(seurat_object,
+        reduction = "umap_harmony",
+        group.by = "harmony_clusters_2",
+        pt.size = pt_size,
+        alpha = alpha,
+        raster = raster,
+        raster.dpi = raster_dpi,
+        label = TRUE) +
+  theme(aspect.ratio = 1)
+ggsave("results/dim_reduction/umap_harmony_clusters_2.pdf",
+       width = 8, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+DimPlot(seurat_object,
+        reduction = "umap_harmony",
+        group.by = "is_doublet",
+        pt.size = pt_size,
+        alpha = alpha,
+        raster = raster,
+        raster.dpi = raster_dpi,
+        label = TRUE) +
+  theme(aspect.ratio = 1) +
+  FeaturePlot(seurat_object,
+              reduction = "umap_harmony",
+              min.cutoff = min_cutoff,
+              max.cutoff = max_cutoff,
+              features = "doublet_score",
+              pt.size = pt_size,
+              alpha = alpha,
+              raster = raster,
+              raster.dpi = raster_dpi) +
+  theme(aspect.ratio = 1)
+ggsave("results/dim_reduction/umap_harmony_doublet.pdf",
+       width = 16, height = 8, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+sessionInfo()
+```
