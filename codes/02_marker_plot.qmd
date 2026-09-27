@@ -23,8 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-用经典 marker 核对各大类在图上的位置。一种基因铺满整张图，多半是作图或归一化的问题，不是所有细胞都是那一类。
-
+用经典 marker 核对各大类在图上的位置。点大、颜色深表示更多细胞、更高表达。一种基因铺满整张图，多半是作图问题。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, cowplot)
@@ -49,6 +48,8 @@ max_cutoff <- "q90"
 ```
 
 ### 1. Marker Plot
+<!-- step-note -->
+每个基因一张图。应对得上教科书位置，例如 CD3D 在 T、MS4A1 在 B、FCGR3B 或 S100A8 在中性粒。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <-

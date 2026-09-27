@@ -23,10 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-把各谱系亚型拼回一份对象。后面用 `annot_main`（大类）和 `annot_sub`（亚型）。细胞集合变了所以重画 UMAP，没有重新聚类。
-
-
-从 05 各 lineage 的 `annot_subtype` 拼出最终对象。Level-1 / Level-2 分别是 `annot_main` / `annot_sub`。`seurat_object_first_annot.qs2` 只提供 counts 和 QC 元数据，粗标 `annot` 留作对照，不用于后续分析。细胞集合变了，HVG / PCA / Harmony / UMAP 必须重做。不重新聚类。
+把各谱系亚型拼回一份对象。后面用 annot_main（大类）和 annot_sub（亚型）。细胞集合变了所以重画 UMAP，没有重新聚类。核对大类/亚型是否分开、marker 是否对得上名字。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, SCpubr, ggh4x)
@@ -55,6 +52,8 @@ n_hvg <- 3000
 ```
 
 ### 1. Collect subtype labels
+<!-- step-note -->
+从 05 各篇把亚型名收齐，检查有没有细胞被漏标或标重。
 
 ```{r message=FALSE, warning=FALSE}
 subtype_files <- c(
@@ -141,6 +140,8 @@ print(table(label_tbl$annot_sub, useNA = "ifany"))
 ```
 
 ### 2. Subset first-annot object
+<!-- step-note -->
+只留下通过亚型注释的细胞。
 
 `first_annot` 的粗标保存在 `annot`，不覆盖。05 丢掉的细胞不会进最终对象。
 
@@ -196,6 +197,8 @@ Layers(seurat_object)
 ```
 
 ### 3. Normalize, HVG, Scale, PCA
+<!-- step-note -->
+细胞集合变了，必须重做高变基因和 PCA。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
@@ -223,6 +226,8 @@ ElbowPlot(seurat_object, reduction = "pca", ndims = 50)
 ```
 
 ### 4. Harmony
+<!-- step-note -->
+全数据再整合一次，给官方 UMAP 用。
 
 ```{r message=FALSE, warning=FALSE}
 tic("Harmony integration")
@@ -287,6 +292,8 @@ seurat_object <- RunUMAP(
 ```
 
 ### 5. Annotation UMAPs
+<!-- step-note -->
+大类和亚型上色。团分得开、名字和位置对得上，才说明注释站得住。
 
 短坐标轴和颜色来自 `codes/plot_colors.R`。
 
@@ -421,6 +428,8 @@ if ("umap_first" %in% Reductions(seurat_object)) {
 ```
 
 ### 6. Marker DotPlots
+<!-- step-note -->
+用 marker 再核对一遍命名。
 
 ```{r message=FALSE, warning=FALSE}
 marker_groups_main <- list(
@@ -468,6 +477,8 @@ ggsave(
 ```
 
 ### 7. Save
+<!-- step-note -->
+写出后面 07–11 都读的最终对象。
 
 后续分析读 `seurat_object_final.qs2`，用 `annot_main`（level-1）/ `annot_sub`（level-2）。官方 UMAP 是 `umap`（dims `n_dims`）。`annot` 和 `umap_first` 只作对照。
 

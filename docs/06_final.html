@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Merge subtypes into final object</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>把各谱系亚型拼回一份对象。后面用 <code>annot_main</code>（大类）和 <code>annot_sub</code>（亚型）。细胞集合变了所以重画 UMAP，没有重新聚类。</p><p>从 05 各 lineage 的 <code>annot_subtype</code> 拼出最终对象。Level-1 / Level-2 分别是 <code>annot_main</code> / <code>annot_sub</code>。<code>seurat_object_first_annot.qs2</code> 只提供 counts 和 QC 元数据，粗标 <code>annot</code> 留作对照，不用于后续分析。细胞集合变了，HVG / PCA / Harmony / UMAP 必须重做。不重新聚类。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>把各谱系亚型拼回一份对象。后面用 annot_main（大类）和 annot_sub（亚型）。细胞集合变了所以重画 UMAP，没有重新聚类。核对大类/亚型是否分开、marker 是否对得上名字。</p></div>
+
 
 
 </div>
@@ -2270,7 +2271,8 @@ margin-bottom: 6px !important;
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>n_hvg <span class="ot">&lt;-</span> <span class="dv">3000</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="collect-subtype-labels" class="level3">
-<h3 class="anchored" data-anchor-id="collect-subtype-labels">1. Collect subtype labels</h3>
+<h3 class="anchored" data-anchor-id="collect-subtype-labels">1. Collect subtype labels</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">从 05 各篇把亚型名收齐，检查有没有细胞被漏标或标重。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>subtype_files <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">hspc =</span> <span class="st">&quot;seurat_object_hspc.qs2&quot;</span>,</span>
@@ -2385,7 +2387,8 @@ CD56bright NK    CD56dim NK       CD8 CTL       CD8 NKT       CD8 Tem
 </div>
 </section>
 <section id="subset-first-annot-object" class="level3">
-<h3 class="anchored" data-anchor-id="subset-first-annot-object">2. Subset first-annot object</h3>
+<h3 class="anchored" data-anchor-id="subset-first-annot-object">2. Subset first-annot object</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">只留下通过亚型注释的细胞。</p>
+
 <p><code>first_annot</code> 的粗标保存在 <code>annot</code>，不覆盖。05 丢掉的细胞不会进最终对象。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>test_genes <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">&quot;data/rdata/test_genes.qs2&quot;</span>, <span class="at">nthreads =</span> <span class="dv">10</span>)</span>
@@ -2483,7 +2486,8 @@ first          HSPC     B Plasma     T    NK Mono/DC   pDC Pre-Neut  Neut   Ery
 </div>
 </section>
 <section id="normalize-hvg-scale-pca" class="level3">
-<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">3. Normalize, HVG, Scale, PCA</h3>
+<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">3. Normalize, HVG, Scale, PCA</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">细胞集合变了，必须重做高变基因和 PCA。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(seurat_object, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(</span>
@@ -2525,7 +2529,8 @@ first          HSPC     B Plasma     T    NK Mono/DC   pDC Pre-Neut  Neut   Ery
 </div>
 </section>
 <section id="harmony" class="level3">
-<h3 class="anchored" data-anchor-id="harmony">4. Harmony</h3>
+<h3 class="anchored" data-anchor-id="harmony">4. Harmony</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">全数据再整合一次，给官方 UMAP 用。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tic</span>(<span class="st">&quot;Harmony integration&quot;</span>)</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">RunHarmony</span>(</span>
@@ -2615,7 +2620,8 @@ first          HSPC     B Plasma     T    NK Mono/DC   pDC Pre-Neut  Neut   Ery
 </div>
 </section>
 <section id="annotation-umaps" class="level3">
-<h3 class="anchored" data-anchor-id="annotation-umaps">5. Annotation UMAPs</h3>
+<h3 class="anchored" data-anchor-id="annotation-umaps">5. Annotation UMAPs</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">大类和亚型上色。团分得开、名字和位置对得上，才说明注释站得住。</p>
+
 <p>短坐标轴同 <code>summary.qmd</code>。颜色来自 <code>codes/plot_colors.R</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_umap_short</span>(</span>
@@ -2778,7 +2784,8 @@ first          HSPC     B Plasma     T    NK Mono/DC   pDC Pre-Neut  Neut   Ery
 </div>
 </section>
 <section id="marker-dotplots" class="level3">
-<h3 class="anchored" data-anchor-id="marker-dotplots">6. Marker DotPlots</h3>
+<h3 class="anchored" data-anchor-id="marker-dotplots">6. Marker DotPlots</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">用 marker 再核对一遍命名。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>marker_groups_main <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">HSPC =</span> <span class="fu">c</span>(<span class="st">&quot;CD34&quot;</span>, <span class="st">&quot;SPINK2&quot;</span>, <span class="st">&quot;AVP&quot;</span>),</span>
@@ -2838,7 +2845,8 @@ first          HSPC     B Plasma     T    NK Mono/DC   pDC Pre-Neut  Neut   Ery
 </div>
 </section>
 <section id="save" class="level3">
-<h3 class="anchored" data-anchor-id="save">7. Save</h3>
+<h3 class="anchored" data-anchor-id="save">7. Save</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">写出后面 07–11 都读的最终对象。</p>
+
 <p>后续分析读 <code>seurat_object_final.qs2</code>，用 <code>annot_main</code>（level-1）/ <code>annot_sub</code>（level-2）。官方 UMAP 是 <code>umap</code>（dims <code>n_dims</code>）。<code>annot</code> 和 <code>umap_first</code> 只作对照。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Idents</span>(seurat_object) <span class="ot">&lt;-</span> <span class="st">&quot;annot_main&quot;</span></span>

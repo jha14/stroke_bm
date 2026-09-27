@@ -23,10 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-转录组看起来像被哪些细胞因子作用过，不是 ELISA。先看各大类，再看中性粒谱系。Lollipop 高度是样本级 ACI 减去 CTRL：红更高、蓝更低、灰不显著。亚型热图用来看信号停在 Pre-Neut 还是成熟粒。
-
-
-全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 `08` 一致）做亚型分析。conda **cytosig**。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，**样本级原始 p**。Lollipop 样式同 arhgap35 `analysis.R` 的 `ggdotchart`。`group` 以 **CTRL** 为对照。`nrand=0`。
+转录组看起来像被哪些细胞因子作用过，不是 ELISA。Lollipop 高度是样本级 ACI 减去 CTRL：红更高、蓝更低、灰不显著。亚型热图看信号停在 Pre-Neut 还是成熟粒。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -86,6 +83,8 @@ print(table(cell_meta$annot_main, cell_meta$group))
 ```
 
 ### 1. CytoSig ridge（全细胞）
+<!-- step-note -->
+给每个细胞打一套细胞因子响应分数。推断「像被什么刺激过」，不是测到的浓度。
 
 `X` = signature.centroid，`Y` = log-normalized 表达。活性取 ridge z-score。barcode 与 `cytosig_all.qs2` 一致则跳过。
 
@@ -141,6 +140,8 @@ print(ck)
 ```
 
 ### 2. 细胞大类：活性热图
+<!-- step-note -->
+哪些大类看起来对哪些细胞因子更敏感。颜色是相对高低。
 
 每个细胞因子跨全部细胞 z-score，再按 `annot_main` 取均值。
 
@@ -174,6 +175,8 @@ p_hm_main_g
 ```
 
 ### 3. 细胞大类：CTRL vs ACI
+<!-- step-note -->
+各大类上 ACI 减 CTRL。红 = ACI 更高。
 
 ```{r message=FALSE, warning=FALSE}
 ck_cell_main <- add_fdr(cell_group_tests(dat, ck, strata_col = "annot_main")) |>
@@ -221,6 +224,8 @@ p_d_c
 ```
 
 ### 4. 中性粒谱系：亚型活性热图
+<!-- step-note -->
+同一套细胞因子在 GMP / Pre-Neut / 成熟粒上的相对高低。
 
 复用全细胞 ridge，取 GMP + Pre-Neut + Neut。
 
@@ -262,6 +267,8 @@ p_hm_sub_g
 ```
 
 ### 5. 中性粒谱系总体：lollipop
+<!-- step-note -->
+中性粒谱系总体：每种细胞因子一个点，高度是样本级 ACI−CTRL。红显著升高，蓝显著降低，灰不显著。
 
 **主图。** 红点 = ACI 患者级显著更高的细胞因子响应。先看 IFN / 集落刺激因子是否在红侧，再对照亚型热图定位阶段。谱系细胞合计，样本级原始 p，细胞级 BH 作对照。按 ACI−CTRL 从高到低。
 
@@ -296,6 +303,8 @@ p_lolli_c
 ```
 
 ### 6. 中性粒亚型：CTRL vs ACI
+<!-- step-note -->
+拆到亚型看信号停在哪一段。同样看样本级。
 
 看信号是停在前体还是成熟粒。患者级为主。
 

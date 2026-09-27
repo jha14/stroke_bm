@@ -23,12 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-中性粒亚型：早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒。后面 07–11 都用这些名字。CellTypist 常把骨髓中性粒标成单核，可以忽略。GMP 在 HSPC 那篇，08 再并进来。
-
-
-第一轮只 subset `Neut` + `Pre-Neut`，不自动并入 HSPC cluster 21。GMP / promyelocyte barcode 确认后再另存。低质量 / doublet 留给 round 2。CellTypist 常把骨髓中性粒标成单核，只作参考。
-
-Subset 后重新 `NormalizeData`：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 `scale.data` 后也需要从 counts 重建 `data`。
+中性粒亚型：早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒。07–11 都用这些名字。CellTypist 常把骨髓中性粒标成单核，可以忽略。GMP 在 HSPC 那篇。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, presto, SCpubr, scop)
@@ -82,6 +77,8 @@ Layers(seurat_object)
 ```
 
 ### 1. Normalize, HVG, Scale, PCA
+<!-- step-note -->
+细胞集合变了，重新找高变基因和降维。PCA 肘图是在选后面用几个主成分，不是生物学结论。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
@@ -139,6 +136,8 @@ ElbowPlot(seurat_object, reduction = "pca", ndims = 50)
 ```
 
 ### 2. Harmony
+<!-- step-note -->
+再按样本整合一次。看各样本是否混开。
 
 ```{r message=FALSE, warning=FALSE}
 tic("Harmony integration")
@@ -225,6 +224,8 @@ seurat_object <- RunUMAP(
 ```
 
 ### 3. Clustering
+<!-- step-note -->
+分辨率扫描。这里主要用于找低质量或明显混合的簇。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <- FindNeighbors(
@@ -308,6 +309,8 @@ VlnPlot(
 ```
 
 ### 4. Markers
+<!-- step-note -->
+点图：点越大、颜色越深，表示该簇里越多细胞、表达越高。用来判断要不要丢掉某些簇。
 
 ```{r message=FALSE, warning=FALSE}
 marker_groups <- list(
@@ -369,6 +372,8 @@ if (file.exists(pred_file)) {
 ```
 
 ### 5. Round 2 (optional)
+<!-- step-note -->
+去掉低质量或混合簇后再算一遍。如果没有要丢的，可以很快略过。
 
 看完 cluster / QC / marker 后填写要丢掉的 `harmony_clusters_4` ID。空向量则跳过。丢掉后会从 counts 再 Normalize → HVG → PCA → Harmony → cluster。
 
@@ -443,6 +448,8 @@ if (length(drop_clusters) == 0) {
 ```
 
 ### 5b. Check cleanup
+<!-- step-note -->
+检查清理后 UMAP 是否还剩明显的垃圾团或双细胞团。
 
 确认低质量 / 污染 cluster 是否已经去掉。还不干净就填下一节的 `drop_clusters_r3`。
 
@@ -551,6 +558,8 @@ if (length(drop_clusters_r3) == 0) {
 ```
 
 ### 6. Recluster for annotation
+<!-- step-note -->
+用清理后的细胞重新聚类，供最后命名。
 
 清理确认后再 Normalize → HVG → PCA → Harmony → UMAP（reduction 名 `umap`），分辨率 0.1 / 0.2 / 0.5 / 1。
 
@@ -660,6 +669,8 @@ FindMarkers(
 ```
 
 ### 7. Markers for annotation
+<!-- step-note -->
+命名用的 marker 点图。对照教科书基因，给每个簇起亚型名。
 
 骨髓中性粒按发育轴标，不必硬套肝癌 11 群：
 
@@ -764,6 +775,8 @@ ggsave(file.path(res_path, "05_markers_contam.pdf"), width = 18, height = 20)
 ```
 
 ### 8. Annotation
+<!-- step-note -->
+最终亚型名字。后面组成和通路分析用这里的标签。
 
 `annot_cluster` 和 `cluster_map` 必须同一套分辨率。看过 `04_recluster` 和上面 FeaturePlot 后再改。
 

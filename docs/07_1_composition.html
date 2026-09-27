@@ -2241,7 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p>每例里各类细胞占多少。每个点是一例的占比。中性粒升高时，其他类型占比会被挤低，不一定是绝对减少。主结论看 07.2 scCODA；这里的 Wilcoxon 和 miloR 是补充。</p><p>样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 <code>07_2_sccoda.ipynb</code> 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p><p>先跑本脚本，再在 conda <code>stroke_bm</code> 里跑 <code>codes/07_2_sccoda.ipynb</code>。</p>
+<p>每例里各类细胞占多少。每个点是一例的占比。中性粒升高时其他类型会被挤低，不一定是绝对减少。主结论看 07.2；这里 Wilcoxon 和 miloR 是补充。组间差异仍可能混有 5′/3′ 和实验室差异。</p><p>样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 <code>07_2_sccoda.ipynb</code> 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p><p>先跑本脚本，再在 conda <code>stroke_bm</code> 里跑 <code>codes/07_2_sccoda.ipynb</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, cowplot, SingleCellExperiment</span>
@@ -2302,7 +2302,8 @@ margin-bottom: 6px !important;
 </div>
 </div>
 <section id="sample-proportions" class="level3">
-<h3 class="anchored" data-anchor-id="sample-proportions">1. Sample proportions</h3>
+<h3 class="anchored" data-anchor-id="sample-proportions">1. Sample proportions</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">堆叠图和箱线：每个点是一例里该类占全部细胞的百分之几。</p>
+
 <p>每例一个占比。看中性粒 / Pre-Neut / HSPC（含 GMP）在 ACI 是否整体上移。点少（11 个），重叠多不代表没趋势，去 07.2 看模型。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>make_prop <span class="ot">&lt;-</span> <span class="cf">function</span>(meta, cell_col) {</span>
@@ -2420,7 +2421,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="wilcoxon-sensitivity" class="level3">
-<h3 class="anchored" data-anchor-id="wilcoxon-sensitivity">2. Wilcoxon (sensitivity)</h3>
+<h3 class="anchored" data-anchor-id="wilcoxon-sensitivity">2. Wilcoxon (sensitivity)</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">用 6 vs 5 个样本做 Wilcoxon，只是敏感性分析。主模型在 07.2。</p>
+
 <p>每类细胞单独做 6 vs 5 的 Wilcoxon。样本少，不显著不等于没生物学差异。每类型独立检验，<strong>不考虑成分约束</strong>，只作对照。主结果看 scCODA / tascCODA。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>wilcox_props <span class="ot">&lt;-</span> <span class="cf">function</span>(prop_df) {</span>
@@ -2485,11 +2487,13 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="export-note" class="level3">
-<h3 class="anchored" data-anchor-id="export-note">3. Export note</h3>
+<h3 class="anchored" data-anchor-id="export-note">3. Export note</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">把计数表交给下一篇 scCODA。</p>
+
 <p><code>data/rdata/composition/cell_meta.csv</code> 给 <code>07_2_sccoda.ipynb</code>。该 notebook 用 pertpy：<code>annot_main</code> 做 scCODA，<code>annot_main</code> + <code>annot_sub</code> 树做 tascCODA。</p>
 </section>
 <section id="milor" class="level3">
-<h3 class="anchored" data-anchor-id="milor">4. miloR</h3>
+<h3 class="anchored" data-anchor-id="milor">4. miloR</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">不按我们起的名字，而按转录组邻居圈一块细胞再比丰度。方向应和占比大致同向，细节可以不完全一样。</p>
+
 <p>邻域丰度：正 logFC（红）= ACI 更富集。SpatialFDR &lt; 0.1 常当作「这片邻居可信」。应和占比图方向大致一致。</p>
 <p>在 Harmony 邻域上检验 ACI vs CTRL。不依赖离散 cluster；邻域再用 <code>annot_main</code> / <code>annot_sub</code> 注释。</p>
 <div class="cell">

@@ -2241,7 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p>看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。09–11 仍按亚型阶段统计，还没用这条拟时间数值。</p><p>骨髓中性粒发育：GMP → Promyelocyte → Pre-Neut → 成熟 Neut。GMP 是粒单祖细胞，也是这条路上 ACI 上调的前体，所以并入轨迹，不单用 Pre-Neut / Neut。细胞集合变了，必须重新 Normalize / HVG / PCA / Harmony / UMAP。不重新聚类，亚型用 <code>06</code> 的 <code>annot_sub</code>。</p><p>本脚本只做：CytoTRACE2 潜能、diffusion map、PHATE、slingshot。对照写法见 NMOSD <code>trajectory.R</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
+<p>看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。09–11 仍按亚型阶段统计，还没用这条拟时间。</p><p>骨髓中性粒发育：GMP → Promyelocyte → Pre-Neut → 成熟 Neut。GMP 是粒单祖细胞，也是这条路上 ACI 上调的前体，所以并入轨迹，不单用 Pre-Neut / Neut。细胞集合变了，必须重新 Normalize / HVG / PCA / Harmony / UMAP。不重新聚类，亚型用 <code>06</code> 的 <code>annot_sub</code>。</p><p>本脚本只做：CytoTRACE2 潜能、diffusion map、PHATE、slingshot。对照写法见 NMOSD <code>trajectory.R</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, harmony, tictoc, cowplot, ggh4x, ggpubr,</span>
@@ -2346,7 +2346,8 @@ margin-bottom: 6px !important;
 <span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="subset-gmp-neutrophil-lineage" class="level3">
-<h3 class="anchored" data-anchor-id="subset-gmp-neutrophil-lineage">1. Subset GMP + neutrophil lineage</h3>
+<h3 class="anchored" data-anchor-id="subset-gmp-neutrophil-lineage">1. Subset GMP + neutrophil lineage</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">只留 GMP 和中性粒这条发育路上的细胞。</p>
+
 <p>从 <code>seurat_object_final.qs2</code> 取 GMP 和全部 Pre-Neut / Neut 亚型。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>test_genes <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">&quot;data/rdata/test_genes.qs2&quot;</span>, <span class="at">nthreads =</span> <span class="dv">10</span>)</span>
@@ -2422,7 +2423,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="normalize-hvg-scale-pca-harmony" class="level3">
-<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca-harmony">2. Normalize, HVG, Scale, PCA, Harmony</h3>
+<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca-harmony">2. Normalize, HVG, Scale, PCA, Harmony</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">集合变了，重做降维和整合，不重新聚类，亚型沿用 06。</p>
+
 <p>和 05 / 06 一样：HVG 3000；PCA 去掉 MT / 核糖体 / HSP / DNAJ / HIST / ZFP36 以及 IG / TR；<code>ScaleData</code> 不 regress；Harmony 按 <code>sample</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(seurat_object, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
@@ -2551,7 +2553,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="annotation-umap" class="level3">
-<h3 class="anchored" data-anchor-id="annotation-umap">3. Annotation UMAP</h3>
+<h3 class="anchored" data-anchor-id="annotation-umap">3. Annotation UMAP</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">看这条路上各亚型是否按 GMP → 早幼粒 → Pre-Neut → 成熟粒排开。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_umap_short</span>(</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  seurat_object, <span class="at">group.by =</span> <span class="st">&quot;annot_sub&quot;</span>, <span class="at">cols =</span> traj_col,</span>
@@ -2634,11 +2637,13 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="cytotrace2" class="level3">
-<h3 class="anchored" data-anchor-id="cytotrace2">4. CytoTRACE2</h3>
+<h3 class="anchored" data-anchor-id="cytotrace2">4. CytoTRACE2</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">分数高更「早」、更不成熟。成熟粒应偏低。两组颜色叠在一起，看的是发育早晚，不是疾病标签。</p>
+
 <p>高分更像未成熟细胞。请同时看按亚型上色和按组别上色：若 ACI 只是「成熟粒更多」则平均潜能会下降，那是组成变化，不一定是同一种细胞变幼稚。</p>
 </section>
 <section id="diffusion-map" class="level3">
-<h3 class="anchored" data-anchor-id="diffusion-map">5. Diffusion map</h3>
+<h3 class="anchored" data-anchor-id="diffusion-map">5. Diffusion map</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">另一种摊平方法，用来看是不是拉成一条轴，而不是好几团。</p>
+
 <p>细胞水平 Wilcoxon 会被组成分牵着走（ACI 成熟中性粒更多）。样本水平是每个样本的中位数再比组；亚型内比较更干净。样本至少 <code>min_cells_sample</code> 个细胞才进样本水平。</p>
 <p>跑完写入 <code>data/rdata/trajectory/cytotrace_neut.qs2</code>。下次细胞数和 barcode 与当前对象一致就跳过 <code>cytotrace2()</code>。</p>
 <div class="cell">
@@ -2930,7 +2935,8 @@ Differentiated      Unipotent    Oligopotent    Multipotent    Pluripotent
 </div>
 </section>
 <section id="diffusion-map-1" class="level3">
-<h3 class="anchored" data-anchor-id="diffusion-map-1">5. Diffusion map</h3>
+<h3 class="anchored" data-anchor-id="diffusion-map-1">5. Diffusion map</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">另一种摊平方法，用来看是不是拉成一条轴，而不是好几团。</p>
+
 <p>Harmony 前 <code>n_dims</code> 维，destiny <code>DiffusionMap</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
@@ -2992,7 +2998,8 @@ Vcells 199111007 1519.1  577636070 4407.1 737742890 5628.6</code></pre>
 </div>
 </section>
 <section id="phate" class="level3">
-<h3 class="anchored" data-anchor-id="phate">6. PHATE</h3>
+<h3 class="anchored" data-anchor-id="phate">6. PHATE</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">再换一种可视化，交叉核对轴是否稳定。</p>
+
 <p>同样用 Harmony 前 <code>n_dims</code> 维。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
@@ -3085,7 +3092,8 @@ Vcells 200082174 1526.6  577636070 4407.1 737742890 5628.6</code></pre>
 </div>
 </section>
 <section id="slingshot" class="level3">
-<h3 class="anchored" data-anchor-id="slingshot">7. Slingshot</h3>
+<h3 class="anchored" data-anchor-id="slingshot">7. Slingshot</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">在图上画拟时间曲线。拟时间是转录组距离，不是小时。目前没有接到 09–11。</p>
+
 <p>在官方 UMAP（<code>umap</code>，dims 1:<code>n_dims</code>）上推断，起点 <strong>GMP</strong>。<code>stretch = 0</code> 同参考脚本。不做 tradeSeq / 伪时间组间密度。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>sling <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>

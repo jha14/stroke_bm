@@ -23,8 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-聚类：把转录组相近的细胞聚在一起，后面才能命名。Harmony 用来减弱样本间的技术差异。UMAP 只是二维展示，靠近不等于发育先后。按样本上色应混在一起，而不是各占一块。
-
+聚类：把转录组相近的细胞聚在一起。先看不整合时样本散不散，再用 Harmony 减弱样本间技术差异。UMAP 靠近不等于发育先后。分组和 5′/3′ 完全叠在一起，整合消不掉平台差异。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot)
@@ -49,6 +48,8 @@ max_cutoff <- "q90"
 ```
 
 ### 0. Load Gene Info
+<!-- step-note -->
+基因注释（线粒体、核糖体、IG/TR 等），后面排除基因和高变基因会用到。
 
 ```{r message=FALSE, warning=FALSE}
 genes_type <- 
@@ -63,6 +64,8 @@ table(genes_type$gene_type)
 ```
 
 ### 1. data Preparation
+<!-- step-note -->
+接上质控后的 counts，准备降维。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <- qs_read("data/rdata/preprocess/data_prep.qs2", nthreads = 10)
@@ -105,6 +108,8 @@ qs_save(test_genes, "data/rdata/test_genes.qs2", nthreads = 10)
 ```
 
 ### 2. Without Integration
+<!-- step-note -->
+先看不校正批次时样本在图上散不散。如果各占一块，后面才需要 Harmony。
 
 ```{r message=FALSE, warning=FALSE}
 Layers(seurat_object)
@@ -226,6 +231,8 @@ ggplot(num_pcs$plot_df,
 ```
 
 ### 3. Dimentionality Reduction without Integration
+<!-- step-note -->
+不整合时的 PCA / UMAP，用来对照整合效果。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <-
@@ -282,6 +289,8 @@ ggsave("results/dim_reduction/umap_unint_30.pdf",
 ```
 
 ### 4. With integration
+<!-- step-note -->
+Harmony 按样本整合。看整合后各样本是否混开；疾病分组仍可能分开，但其中叠着 5′/3′。
 
 ```{r message=FALSE, warning=FALSE}
 tic("Harmony integration")
@@ -589,6 +598,8 @@ rm(seurat_object, umap_temp)
 ```
 
 ### 5. Visualization of Integration
+<!-- step-note -->
+核对整合后的 UMAP：样本应尽量混，cluster 应成团。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <-
@@ -660,6 +671,8 @@ ggsave(
 
 
 ### 6. Level 1 Clustering
+<!-- step-note -->
+在整合后的图上聚类。分辨率越大簇越碎。这一步给 04 起大类名用。
 
 ```{r message=FALSE, warning=FALSE}
 seurat_object <-

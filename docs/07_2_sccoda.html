@@ -7516,8 +7516,8 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="scCODA-/-tascCODA">scCODA / tascCODA<a class="anchor-link" href="#scCODA-/-tascCODA">¶</a></h1><p>组成变化的主模型。Kernel：conda <strong>pertpy</strong>。先跑 <code>07_1_composition.qmd</code>。scCODA 看大类，tascCODA 看亚型（树是大类→亚型），对照是 CTRL。</p>
-<p>每个点仍是一例的占比。模型会处理「占比加起来必须是 100%」，所以比普通 Wilcoxon 更合适。看可信区间是否离开「无变化」。树图往上/往下是相对 CTRL 的增减，先看中性粒、Pre-Neut、GMP。和 07.1 不一致时以本页为准。</p>
+<h1 id="scCODA-/-tascCODA">scCODA / tascCODA<a class="anchor-link" href="#scCODA-/-tascCODA">¶</a></h1><p>组成变化的主模型。scCODA 看大类，tascCODA 看亚型（树是大类→亚型），对照是 CTRL。每个点仍是一例的占比。模型会处理「占比加起来必须是 100%」。看可信区间是否离开「无变化」。树图往上/往下是相对 CTRL 的增减，先看中性粒、Pre-Neut、GMP。</p>
+<p>CTRL 是 5′、ACI 是 3′，且不是同一实验室同时取的。这里报出的组成差异同样可能混有平台和取样差异。</p>
 </div>
 </div>
 </div>
@@ -8014,6 +8014,17 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e5e70a08">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p>大类水平。优先看中性粒这一枝的效应和可信区间。</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bd905566">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -8402,6 +8413,17 @@ Name: Final Parameter, dtype: bool</pre>
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="2.-tascCODA-(annot_sub-tree)">2. tascCODA (<code>annot_sub</code> tree)<a class="anchor-link" href="#2.-tascCODA-(annot_sub-tree)">¶</a></h2><p><code>pen_args={"phi": 0}</code> 不偏向聚到上层还是叶子。11 个样本后验会比较宽。</p>
 <p>树图用 matplotlib（<code>plot_coda_tree</code>），不要调用 <code>plot_draw_tree</code> / <code>plot_draw_effects</code>：它们走 ete4+Qt 的 <code>%%inline</code>，无显示器时会卡死或把 kernel 打挂。</p>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=05450757">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p>亚型挂在大类下面。先看 GMP、Pre-Neut、成熟粒所在的枝。</p>
 </div>
 </div>
 </div>
@@ -9212,6 +9234,17 @@ Name: Final Parameter, dtype: bool</pre>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="3.-Session-info">3. Session info<a class="anchor-link" href="#3.-Session-info">¶</a></h2>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=27567b9e">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p>软件版本，便于复现。</p>
 </div>
 </div>
 </div>

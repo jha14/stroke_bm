@@ -23,10 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-通路活性（JAK-STAT、NFκB、TNFα 等），从靶基因推断，不是磷酸化检测。雄/雌激素通路已去掉。正分更活跃。Δ 热图是 ACI 中位数减去 CTRL 中位数。看中性粒谱系、每个样本一个点的比较；细胞级星号几乎铺满，不要当病人水平的结论。
-
-
-全细胞 PROGENy（decoupleR **mlm**），再对 `08` 中性粒谱系（GMP → 成熟 Neut）做阶段和分组。跑 mlm 前从网络里去掉 **Androgen / Estrogen**。mlm 只跑一次。统计、箱线、直方图用 **mlm 原始 t 值**；类群均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/pw_sc.html)先对每个通路跨细胞 z-score（`ScaleData`）再取均值。Wilcoxon Δ 热图仍用原始分数。转录因子见 `10_neut_decouple.qmd`。细胞级 Wilcoxon 用 BH；样本级用原始 p。`group` 以 **CTRL** 为对照。
+通路活性（JAK-STAT、NFκB、TNFα 等），从靶基因推断，不是磷酸化检测。雄/雌激素通路已去掉。正分更活跃。Δ 热图是 ACI 中位数减去 CTRL。看中性粒谱系、每个样本一个点；细胞级星号几乎铺满，不要当病人水平的结论。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -86,6 +83,8 @@ print(table(cell_meta$annot_sub[cell_meta$annot_sub %in% traj_levels],
 ```
 
 ### 1. PROGENy mlm
+<!-- step-note -->
+每个细胞、每条通路算一个活性分数。正分更活跃。这是 RNA 推断，不是磷酸化。
 
 `get_progeny(top = 500)`，去掉 Androgen / Estrogen 后再 mlm（多元回归，不能事后删列）。旧缓存若仍含这两条通路会重跑。
 
@@ -124,6 +123,8 @@ print(pw)
 ```
 
 ### 2. 大类之间
+<!-- step-note -->
+各条通路在不同大类里相对高低。颜色是标准化后的相对值，用来横着比较通路，不是蛋白量。
 
 先看「哪类细胞哪条通路高」，不是组间。Kruskal 只说明大类之间有差别（几乎一定有）。每个通路 Kruskal–Wallis（`annot_main`，原始 score）。热图：每个通路跨细胞 z-score 后再按大类取均值。
 
@@ -163,6 +164,8 @@ p_box
 ```
 
 ### 3. CTRL vs ACI（每个大类）
+<!-- step-note -->
+每个大类里 ACI 减 CTRL。红 = ACI 更高。组间仍叠着平台差异。
 
 患者级星号才是组间。直方图：同一亚型里蓝/红分布是否错开；错开但患者级不显著 = 只是细胞很多。细胞级 Wilcoxon + BH；样本中位数用原始 p。
 
@@ -291,6 +294,8 @@ p_hist_med_main
 ```
 
 ### 4. 中性粒谱系：发育阶段
+<!-- step-note -->
+从 GMP 到成熟粒，通路是否随发育升降。
 
 从左 GMP 到右成熟粒。某通路沿阶段变红/变蓝 = 发育程序，不一定是脑梗造成的。脑梗效应看下一节组间。复用全细胞 mlm。阶段秩 Spearman + Kruskal 用原始 score。热图在谱系细胞内 z-score 再取均值。
 
@@ -333,6 +338,8 @@ p_box_n
 ```
 
 ### 5. 中性粒谱系：CTRL vs ACI
+<!-- step-note -->
+中性粒这条路上两组差在哪。请看每个样本一个点的图，不要看细胞级星号。
 
 谱系合计 + 每个 `annot_sub`。样本级原始 p。
 

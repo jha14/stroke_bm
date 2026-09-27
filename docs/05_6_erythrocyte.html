@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Subtype: Erythrocyte</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>红系亚型。珠蛋白主导高变基因是预期现象。看本节最后的命名即可。</p><p>Level-1 <code>Ery</code>（含偏成熟的 cluster 36）。HVG 会被珠蛋白主导，属预期。同时看 MK（PF4/PPBP）和其它谱系污染。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>红系亚型。珠蛋白主导高变基因是预期现象。看最后的命名即可。</p></div>
+
 
 
 </div>
@@ -2324,7 +2325,8 @@ margin-bottom: 6px !important;
 </div>
 </div>
 <section id="normalize-hvg-scale-pca" class="level3">
-<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">1. Normalize, HVG, Scale, PCA</h3>
+<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">1. Normalize, HVG, Scale, PCA</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">细胞集合变了，重新找高变基因和降维。PCA 肘图是在选后面用几个主成分，不是生物学结论。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(seurat_object, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(</span>
@@ -2411,7 +2413,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="harmony" class="level3">
-<h3 class="anchored" data-anchor-id="harmony">2. Harmony</h3>
+<h3 class="anchored" data-anchor-id="harmony">2. Harmony</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">再按样本整合一次。看各样本是否混开。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tic</span>(<span class="st">&quot;Harmony integration&quot;</span>)</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">RunHarmony</span>(</span>
@@ -2528,7 +2531,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="clustering" class="level3">
-<h3 class="anchored" data-anchor-id="clustering">3. Clustering</h3>
+<h3 class="anchored" data-anchor-id="clustering">3. Clustering</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">分辨率扫描。这里主要用于找低质量或明显混合的簇。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(</span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  seurat_object,</span>
@@ -2641,7 +2645,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="markers" class="level3">
-<h3 class="anchored" data-anchor-id="markers">4. Markers</h3>
+<h3 class="anchored" data-anchor-id="markers">4. Markers</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">点图：点越大、颜色越深，表示该簇里越多细胞、表达越高。用来判断要不要丢掉某些簇。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>marker_groups <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">MEP =</span> <span class="fu">c</span>(<span class="st">&quot;GATA2&quot;</span>, <span class="st">&quot;KIT&quot;</span>, <span class="st">&quot;CD34&quot;</span>, <span class="st">&quot;ITGA2B&quot;</span>),</span>
@@ -2751,7 +2756,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="round-2-optional" class="level3">
-<h3 class="anchored" data-anchor-id="round-2-optional">5. Round 2 (optional)</h3>
+<h3 class="anchored" data-anchor-id="round-2-optional">5. Round 2 (optional)</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">去掉低质量或混合簇后再算一遍。如果没有要丢的，可以很快略过。</p>
+
 <p>看完 cluster / QC / marker 后填写要丢掉的 <code>harmony_clusters_4</code> ID。空向量则跳过。丢掉后会从 counts 再 Normalize → HVG → PCA → Harmony → cluster。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>drop_clusters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">18</span>, <span class="dv">20</span>, <span class="dv">26</span>, <span class="dv">32</span>, <span class="dv">33</span>)</span>
@@ -2837,7 +2843,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="b.-check-cleanup" class="level3">
-<h3 class="anchored" data-anchor-id="b.-check-cleanup">5b. Check cleanup</h3>
+<h3 class="anchored" data-anchor-id="b.-check-cleanup">5b. Check cleanup</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">检查清理后 UMAP 是否还剩明显的垃圾团或双细胞团。</p>
+
 <p>确认低质量 / 污染 cluster 是否已经去掉。还不干净就填下一节的 <code>drop_clusters_r3</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(</span>
@@ -2966,7 +2973,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="recluster-for-annotation" class="level3">
-<h3 class="anchored" data-anchor-id="recluster-for-annotation">6. Recluster for annotation</h3>
+<h3 class="anchored" data-anchor-id="recluster-for-annotation">6. Recluster for annotation</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">用清理后的细胞重新聚类，供最后命名。</p>
+
 <p>清理确认后再 Normalize → HVG → PCA → Harmony → UMAP（reduction 名 <code>umap</code>），分辨率 0.1 / 0.2 / 0.5 / 1。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Idents</span>(seurat_object) <span class="ot">&lt;-</span> <span class="st">&quot;sample&quot;</span></span>
@@ -3079,7 +3087,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="markers-for-annotation" class="level3">
-<h3 class="anchored" data-anchor-id="markers-for-annotation">7. Markers for annotation</h3>
+<h3 class="anchored" data-anchor-id="markers-for-annotation">7. Markers for annotation</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">命名用的 marker 点图。对照教科书基因，给每个簇起亚型名。</p>
+
 <p>人骨髓红系是 <strong>MEP → Early Ery → Intermediate Ery → Late Ery</strong> 连续轴。对照下面四组 marker：MEP 看 <code>GATA2</code>/<code>KIT</code>/<code>CD34</code>（珠蛋白应低）；Early 看 <code>TFRC</code>/<code>CD36</code>/<code>EPOR</code>/<code>GATA1</code>/<code>KLF1</code>；Intermediate 看 <code>CA1</code>/<code>HBD</code>/<code>AHSP</code>；Late 看 <code>HBB</code>/<code>GYPA</code>/<code>ALAS2</code>/<code>SLC4A1</code>（<code>TFRC</code>/<code>MKI67</code> 下降、UMI 低）。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a><span class="fu">FeaturePlot</span>(</span>
@@ -3232,7 +3241,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="annotation" class="level3">
-<h3 class="anchored" data-anchor-id="annotation">8. Annotation</h3>
+<h3 class="anchored" data-anchor-id="annotation">8. Annotation</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">最终亚型名字。后面组成和通路分析用这里的标签。</p>
+
 <p><code>annot_cluster</code> 和 <code>cluster_map</code> 必须同一套分辨率。看过 <code>04_recluster</code> 和上面 FeaturePlot 后再改。按 <strong>MEP / Early Ery / Intermediate Ery / Late Ery</strong> 填。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a>annot_cluster <span class="ot">&lt;-</span> <span class="st">&quot;harmony_clusters_0.1&quot;</span></span>

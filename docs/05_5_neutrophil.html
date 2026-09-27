@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Subtype: Neutrophil</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>中性粒亚型：早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒。后面 07–11 都用这些名字。CellTypist 常把骨髓中性粒标成单核，可以忽略。GMP 在 HSPC 那篇，08 再并进来。</p><p>第一轮只 subset <code>Neut</code> + <code>Pre-Neut</code>，不自动并入 HSPC cluster 21。GMP / promyelocyte barcode 确认后再另存。低质量 / doublet 留给 round 2。CellTypist 常把骨髓中性粒标成单核，只作参考。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>中性粒亚型：早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒。07–11 都用这些名字。CellTypist 常把骨髓中性粒标成单核，可以忽略。GMP 在 HSPC 那篇。</p></div>
+
 
 
 </div>
@@ -2324,7 +2325,8 @@ margin-bottom: 6px !important;
 </div>
 </div>
 <section id="normalize-hvg-scale-pca" class="level3">
-<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">1. Normalize, HVG, Scale, PCA</h3>
+<h3 class="anchored" data-anchor-id="normalize-hvg-scale-pca">1. Normalize, HVG, Scale, PCA</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">细胞集合变了，重新找高变基因和降维。PCA 肘图是在选后面用几个主成分，不是生物学结论。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(seurat_object, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(</span>
@@ -2410,7 +2412,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="harmony" class="level3">
-<h3 class="anchored" data-anchor-id="harmony">2. Harmony</h3>
+<h3 class="anchored" data-anchor-id="harmony">2. Harmony</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">再按样本整合一次。看各样本是否混开。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tic</span>(<span class="st">&quot;Harmony integration&quot;</span>)</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">RunHarmony</span>(</span>
@@ -2527,7 +2530,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="clustering" class="level3">
-<h3 class="anchored" data-anchor-id="clustering">3. Clustering</h3>
+<h3 class="anchored" data-anchor-id="clustering">3. Clustering</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">分辨率扫描。这里主要用于找低质量或明显混合的簇。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(</span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  seurat_object,</span>
@@ -2640,7 +2644,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="markers" class="level3">
-<h3 class="anchored" data-anchor-id="markers">4. Markers</h3>
+<h3 class="anchored" data-anchor-id="markers">4. Markers</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">点图：点越大、颜色越深，表示该簇里越多细胞、表达越高。用来判断要不要丢掉某些簇。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>marker_groups <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">promyelocyte =</span> <span class="fu">c</span>(<span class="st">&quot;AZU1&quot;</span>, <span class="st">&quot;MPO&quot;</span>, <span class="st">&quot;ELANE&quot;</span>, <span class="st">&quot;CTSG&quot;</span>, <span class="st">&quot;PRTN3&quot;</span>, <span class="st">&quot;CD34&quot;</span>),</span>
@@ -2752,7 +2757,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="round-2-optional" class="level3">
-<h3 class="anchored" data-anchor-id="round-2-optional">5. Round 2 (optional)</h3>
+<h3 class="anchored" data-anchor-id="round-2-optional">5. Round 2 (optional)</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">去掉低质量或混合簇后再算一遍。如果没有要丢的，可以很快略过。</p>
+
 <p>看完 cluster / QC / marker 后填写要丢掉的 <code>harmony_clusters_4</code> ID。空向量则跳过。丢掉后会从 counts 再 Normalize → HVG → PCA → Harmony → cluster。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>drop_clusters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">17</span>, <span class="dv">30</span>, <span class="dv">35</span>, <span class="dv">36</span>)</span>
@@ -2838,7 +2844,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="b.-check-cleanup" class="level3">
-<h3 class="anchored" data-anchor-id="b.-check-cleanup">5b. Check cleanup</h3>
+<h3 class="anchored" data-anchor-id="b.-check-cleanup">5b. Check cleanup</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">检查清理后 UMAP 是否还剩明显的垃圾团或双细胞团。</p>
+
 <p>确认低质量 / 污染 cluster 是否已经去掉。还不干净就填下一节的 <code>drop_clusters_r3</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_grid</span>(</span>
@@ -2967,7 +2974,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="recluster-for-annotation" class="level3">
-<h3 class="anchored" data-anchor-id="recluster-for-annotation">6. Recluster for annotation</h3>
+<h3 class="anchored" data-anchor-id="recluster-for-annotation">6. Recluster for annotation</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">用清理后的细胞重新聚类，供最后命名。</p>
+
 <p>清理确认后再 Normalize → HVG → PCA → Harmony → UMAP（reduction 名 <code>umap</code>），分辨率 0.1 / 0.2 / 0.5 / 1。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Idents</span>(seurat_object) <span class="ot">&lt;-</span> <span class="st">&quot;sample&quot;</span></span>
@@ -3131,7 +3139,8 @@ FTH1       0  0.2727408 0.991 0.769         0</code></pre>
 </div>
 </section>
 <section id="markers-for-annotation" class="level3">
-<h3 class="anchored" data-anchor-id="markers-for-annotation">7. Markers for annotation</h3>
+<h3 class="anchored" data-anchor-id="markers-for-annotation">7. Markers for annotation</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">命名用的 marker 点图。对照教科书基因，给每个簇起亚型名。</p>
+
 <p>骨髓中性粒按发育轴标，不必硬套肝癌 11 群：</p>
 <ol type="1">
 <li><strong>Promyelocyte</strong>：<code>DEFA1/3/4</code> <code>AZU1</code> <code>MPO</code> 高，<strong>还没有</strong> <code>LTF</code>/<code>CAMP</code>。</li>
@@ -3289,7 +3298,8 @@ FTH1       0  0.2727408 0.991 0.769         0</code></pre>
 </div>
 </section>
 <section id="annotation" class="level3">
-<h3 class="anchored" data-anchor-id="annotation">8. Annotation</h3>
+<h3 class="anchored" data-anchor-id="annotation">8. Annotation</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">最终亚型名字。后面组成和通路分析用这里的标签。</p>
+
 <p><code>annot_cluster</code> 和 <code>cluster_map</code> 必须同一套分辨率。看过 <code>04_recluster</code> 和上面 FeaturePlot 后再改。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb99"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb99-1"><a href="#cb99-1" aria-hidden="true" tabindex="-1"></a>annot_cluster <span class="ot">&lt;-</span> <span class="st">&quot;harmony_clusters_0.5&quot;</span></span>

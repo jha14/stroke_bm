@@ -23,8 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-质控。先有 ACI 5 例，再按性别、年龄匹配选了 CTRL 6 例（名单见报告首页）。这里去掉空液滴、双细胞和线粒体过高的细胞。某一例过滤后掉得特别多，优先考虑文库质量。这一步不回答组成问题。
-
+质控。先有 ACI 5 例，再按性别、年龄匹配选了 CTRL 6 例。CTRL 全是 5′、ACI 全是 3′，而且不是同一实验室、同一批次取的（见首页）。这里去掉空液滴、双细胞和线粒体过高的细胞。某一例掉得特别多，优先考虑文库质量。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, scDblFinder, BiocParallel)
@@ -33,6 +32,8 @@ setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
 ```
 
 ### 1. Load Data
+<!-- step-note -->
+读入 11 例 10x 矩阵，写上分组、性别、年龄。
 
 ```{r message=FALSE, warning=FALSE}
 all_data <- list()
@@ -107,6 +108,8 @@ qs_save(all_data, file = "data/rdata/preprocess/all_data.qs2", nthreads = 10)
 ```
 
 ### 2. Merge Layers
+<!-- step-note -->
+合成一个对象，方便后面统一质控。
 
 ```{r message=FALSE, warning=FALSE}
 all_data <- qs_read("data/rdata/preprocess/all_data.qs2", nthreads = 10)
@@ -136,6 +139,8 @@ all_data_qc@meta.data |>
 ```
 
 ### 3. Calcuate QC
+<!-- step-note -->
+算每个细胞的基因数、UMI、线粒体和核糖体比例。线粒体很高常见于濒死或破膜细胞。
 
 ```{r message=FALSE, warning=FALSE}
 grep("^MT-", rownames(all_data_qc), value = TRUE)
@@ -264,6 +269,8 @@ gc()
 ```
 
 ### 4. Detection-based Filtering
+<!-- step-note -->
+按检出基因数和 UMI 去掉空液滴、信息量太低的细胞。看各样本剩下多少，有没有某一例被削得很狠。
 
 ```{r message=FALSE, warning=FALSE}
 all_data_qc <- qs_read("data/rdata/preprocess/all_data_qc.qs2", nthreads = 10)
@@ -324,6 +331,8 @@ rm(counts_matrix, most_expressed)
 ```
 
 ### 5. Mito/Ribo Filtering
+<!-- step-note -->
+再按线粒体、核糖体比例过滤。阈值是经验性的，目的是去掉明显差的细胞，不是疾病分组。
 
 ```{r message=FALSE, warning=FALSE}
 selected_mito <- WhichCells(
@@ -383,6 +392,8 @@ gc()
 ```
 
 ### (Skipped) Check Sample Sex
+<!-- step-note -->
+临床已有性别，这段没跑。
 
 ```{r message=FALSE, warning=FALSE}
 # suppressMessages(require(biomaRt))
@@ -416,6 +427,8 @@ gc()
 ```
 
 ### 6. Cell Cycle Score
+<!-- step-note -->
+给每个细胞打一个周期分数，后面作图用。没有强制从表达里回归掉周期。
 
 ```{r message=FALSE, warning=FALSE}
 # data_filt_qc <- qs_read("data/rdata/preprocess/data_filt_qc.qs2", nthreads = 10) # nolint
@@ -460,6 +473,8 @@ rm(
 ```
 
 ### 7. Predict Doublets
+<!-- step-note -->
+预测两个细胞粘在一起的液滴。双细胞会把两种 marker 叠在同一个点上，干扰命名。
 
 ```{r message=FALSE, warning=FALSE}
 data_prep <- qs_read(
@@ -487,6 +502,8 @@ rm(sce, bp_param, data_prep)
 ```
 
 ### 8. Prepare Final Data
+<!-- step-note -->
+写出质控后的对象，后面聚类都读这份。
 
 ```{r message=FALSE, warning=FALSE}
 data_prep <- qs_read(

@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Marker Plot</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>用经典 marker 核对各大类在图上的位置。一种基因铺满整张图，多半是作图或归一化的问题，不是所有细胞都是那一类。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>用经典 marker 核对各大类在图上的位置。点大、颜色深表示更多细胞、更高表达。一种基因铺满整张图，多半是作图问题。</p></div>
+
 
 
 </div>
@@ -2265,7 +2266,8 @@ margin-bottom: 6px !important;
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>max_cutoff <span class="ot">&lt;-</span> <span class="st">&quot;q90&quot;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="marker-plot" class="level3">
-<h3 class="anchored" data-anchor-id="marker-plot">1. Marker Plot</h3>
+<h3 class="anchored" data-anchor-id="marker-plot">1. Marker Plot</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">每个基因一张图。应对得上教科书位置，例如 CD3D 在 T、MS4A1 在 B、FCGR3B 或 S100A8 在中性粒。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">qs_read</span>(</span>

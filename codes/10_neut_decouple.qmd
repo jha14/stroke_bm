@@ -25,9 +25,6 @@ ul, ol {
 <!-- reader-guide -->
 同一批细胞（GMP + Pre-Neut + Neut）上的转录因子活性。正分表示该 TF 的靶基因整体上调。TF 活性不等于该 TF 自己的 mRNA。看发育轴热图和每个样本一个点的组间比较。
 
-
-`08` 同一批细胞的 CollecTRI 转录因子活性（decoupleR **ulm**）。PROGENy 在 `09_progeny.qmd`。统计和箱线用 **ulm 原始 t 值**；均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/tf_sc.html)先对每个 TF 跨细胞 z-score 再取均值。显著太多时按与阶段 Spearman |ρ| 取 top。细胞级 Wilcoxon 用 BH；样本级用原始 p。`group` 以 **CTRL** 为对照。
-
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
   Seurat, tidyverse, qs2, decoupleR, cowplot, tictoc
@@ -86,6 +83,8 @@ print(table(cell_meta$annot_sub, cell_meta$group))
 ```
 
 ### 1. CollecTRI ulm
+<!-- step-note -->
+每个细胞、每个转录因子一个活性分数。正分表示靶基因整体上调。
 
 ```{r message=FALSE, warning=FALSE}
 tf_qs2 <- file.path(obj_path, "collectri_neut.qs2")
@@ -113,6 +112,8 @@ length(tfs)
 ```
 
 ### 2. 发育阶段 → top TF
+<!-- step-note -->
+先找随 GMP→成熟粒变化最大的 TF，避免一千个 TF 一起报。
 
 只展示和阶段相关最强的 20 个 TF，不是「只有这 20 个重要」。在 Kruskal BH < 0.05 里按 |ρ| 取 `r n_tf_top`；不够就按 |ρ| 硬取。
 
@@ -157,6 +158,8 @@ ggsave(file.path(res_path, "01_tf_box_stage.pdf"), p_box_tf, width = 14, height 
 ```
 
 ### 3. CTRL vs ACI（top TF）
+<!-- step-note -->
+这些 TF 在两组之间有没有差。看样本级点图。
 
 只对发育相关 top TF 做分组检验。样本级原始 p。
 

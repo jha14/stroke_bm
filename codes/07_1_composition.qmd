@@ -23,12 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-每例里各类细胞占多少。每个点是一例的占比。中性粒升高时，其他类型占比会被挤低，不一定是绝对减少。主结论看 07.2 scCODA；这里的 Wilcoxon 和 miloR 是补充。
-
-
-样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 `07_2_sccoda.ipynb` 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。`group` 以 **CTRL** 为对照。
-
-先跑本脚本，再在 conda `stroke_bm` 里跑 `codes/07_2_sccoda.ipynb`。
+每例里各类细胞占多少。每个点是一例的占比。中性粒升高时其他类型会被挤低，不一定是绝对减少。主结论看 07.2；这里 Wilcoxon 和 miloR 是补充。组间差异仍可能混有 5′/3′ 和实验室差异。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -74,6 +69,8 @@ print(table(cell_meta$annot_main, cell_meta$group))
 ```
 
 ### 1. Sample proportions
+<!-- step-note -->
+堆叠图和箱线：每个点是一例里该类占全部细胞的百分之几。
 
 每例一个占比。看中性粒 / Pre-Neut / HSPC（含 GMP）在 ACI 是否整体上移。点少（11 个），重叠多不代表没趋势，去 07.2 看模型。
 
@@ -169,6 +166,8 @@ ggsave(
 ```
 
 ### 2. Wilcoxon (sensitivity)
+<!-- step-note -->
+用 6 vs 5 个样本做 Wilcoxon，只是敏感性分析。主模型在 07.2。
 
 每类细胞单独做 6 vs 5 的 Wilcoxon。样本少，不显著不等于没生物学差异。每类型独立检验，**不考虑成分约束**，只作对照。主结果看 scCODA / tascCODA。
 
@@ -205,10 +204,14 @@ wilcox_sub
 ```
 
 ### 3. Export note
+<!-- step-note -->
+把计数表交给下一篇 scCODA。
 
 `data/rdata/composition/cell_meta.csv` 给 `07_2_sccoda.ipynb`。该 notebook 用 pertpy：`annot_main` 做 scCODA，`annot_main` + `annot_sub` 树做 tascCODA。
 
 ### 4. miloR
+<!-- step-note -->
+不按我们起的名字，而按转录组邻居圈一块细胞再比丰度。方向应和占比大致同向，细节可以不完全一样。
 
 邻域丰度：正 logFC（红）= ACI 更富集。SpatialFDR < 0.1 常当作「这片邻居可信」。应和占比图方向大致一致。
 

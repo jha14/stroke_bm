@@ -2308,7 +2308,8 @@ margin-bottom: 6px !important;
 </div>
 </div>
 <section id="collectri-ulm" class="level3">
-<h3 class="anchored" data-anchor-id="collectri-ulm">1. CollecTRI ulm</h3>
+<h3 class="anchored" data-anchor-id="collectri-ulm">1. CollecTRI ulm</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">每个细胞、每个转录因子一个活性分数。正分表示靶基因整体上调。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>tf_qs2 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(obj_path, <span class="st">&quot;collectri_neut.qs2&quot;</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">cache_ok</span>(tf_qs2, <span class="fu">colnames</span>(seurat_object))) {</span>
@@ -2338,7 +2339,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="发育阶段-top-tf" class="level3">
-<h3 class="anchored" data-anchor-id="发育阶段-top-tf">2. 发育阶段 → top TF</h3>
+<h3 class="anchored" data-anchor-id="发育阶段-top-tf">2. 发育阶段 → top TF</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">先找随 GMP→成熟粒变化最大的 TF，避免一千个 TF 一起报。</p>
+
 <p>只展示和阶段相关最强的 20 个 TF，不是「只有这 20 个重要」。在 Kruskal BH &lt; 0.05 里按 |ρ| 取 20；不够就按 |ρ| 硬取。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>tf_stage <span class="ot">&lt;-</span> <span class="fu">stage_assoc</span>(dat_tf, tfs, <span class="st">&quot;annot_sub&quot;</span>)</span>
@@ -2417,7 +2419,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="ctrl-vs-acitop-tf" class="level3">
-<h3 class="anchored" data-anchor-id="ctrl-vs-acitop-tf">3. CTRL vs ACI（top TF）</h3>
+<h3 class="anchored" data-anchor-id="ctrl-vs-acitop-tf">3. CTRL vs ACI（top TF）</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">这些 TF 在两组之间有没有差。看样本级点图。</p>
+
 <p>只对发育相关 top TF 做分组检验。样本级原始 p。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>tf_cell_all <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(<span class="fu">cell_group_tests</span>(dat_tf, tf_top))</span>

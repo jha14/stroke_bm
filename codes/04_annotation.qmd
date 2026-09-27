@@ -6,7 +6,7 @@ format:
 ---
 
 <!-- reader-guide -->
-按 marker 给 cluster 起大类名（HSPC、B、中性粒等）。CellTypist 只作参考：骨髓中性粒常被标成单核。Pre-Neut、GMP 的边界在 05 再定。
+按 marker 给 cluster 起大类名。看点图和最后的对应规则即可，中间分辨率扫描是在选切法。CellTypist 只作参考。Pre-Neut、GMP 的边界在 05 再定。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, presto, cowplot, SCpubr, scop, qs2)

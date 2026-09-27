@@ -29,25 +29,32 @@
   <p>ACI 4 男 1 女，年龄 35–75 岁。CTRL 3 男 3 女，年龄 30–77 岁。</p>
   <table>
     <thead>
-      <tr><th>样本</th><th>分组</th><th>性别</th><th>年龄</th></tr>
+      <tr><th>样本</th><th>分组</th><th>性别</th><th>年龄</th><th>文库</th></tr>
     </thead>
     <tbody>
-      <tr><td>ACI-1</td><td>ACI</td><td>男</td><td>54</td></tr>
-      <tr><td>ACI-2</td><td>ACI</td><td>男</td><td>75</td></tr>
-      <tr><td>ACI-3</td><td>ACI</td><td>男</td><td>50</td></tr>
-      <tr><td>ACI-4</td><td>ACI</td><td>女</td><td>65</td></tr>
-      <tr><td>ACI-5</td><td>ACI</td><td>男</td><td>35</td></tr>
-      <tr><td>CTRL-1</td><td>CTRL</td><td>男</td><td>62</td></tr>
-      <tr><td>CTRL-2</td><td>CTRL</td><td>女</td><td>59</td></tr>
-      <tr><td>CTRL-3</td><td>CTRL</td><td>男</td><td>77</td></tr>
-      <tr><td>CTRL-4</td><td>CTRL</td><td>女</td><td>60</td></tr>
-      <tr><td>CTRL-5</td><td>CTRL</td><td>男</td><td>30</td></tr>
-      <tr><td>CTRL-6</td><td>CTRL</td><td>女</td><td>30</td></tr>
+      <tr><td>ACI-1</td><td>ACI</td><td>男</td><td>54</td><td>3′</td></tr>
+      <tr><td>ACI-2</td><td>ACI</td><td>男</td><td>75</td><td>3′</td></tr>
+      <tr><td>ACI-3</td><td>ACI</td><td>男</td><td>50</td><td>3′</td></tr>
+      <tr><td>ACI-4</td><td>ACI</td><td>女</td><td>65</td><td>3′</td></tr>
+      <tr><td>ACI-5</td><td>ACI</td><td>男</td><td>35</td><td>3′</td></tr>
+      <tr><td>CTRL-1</td><td>CTRL</td><td>男</td><td>62</td><td>5′</td></tr>
+      <tr><td>CTRL-2</td><td>CTRL</td><td>女</td><td>59</td><td>5′</td></tr>
+      <tr><td>CTRL-3</td><td>CTRL</td><td>男</td><td>77</td><td>5′</td></tr>
+      <tr><td>CTRL-4</td><td>CTRL</td><td>女</td><td>60</td><td>5′</td></tr>
+      <tr><td>CTRL-5</td><td>CTRL</td><td>男</td><td>30</td><td>5′</td></tr>
+      <tr><td>CTRL-6</td><td>CTRL</td><td>女</td><td>30</td><td>5′</td></tr>
     </tbody>
   </table>
 
+  <div class="warn">
+    <strong>两组不是同一实验室、同一批次、同时取的样本。</strong>
+    对照全部是 5′ 文库，ACI 全部是 3′ 文库，分组和测序化学完全叠在一起。
+    现在看到的 CTRL vs ACI 差异，没法从设计上拆开「疾病」和「实验室 / 取样处理 / 5′ vs 3′」。
+    Harmony 只能减弱样本之间的技术差异，纠正不了这种与分组完全共线的平台差异。读后面任何组间图时都要把这一点放在心里。
+  </div>
+
   <div class="guide">
-    急性脑梗后，颅骨骨髓里中性粒细胞和前体比例升高。07 看有没有扩增；08–11 看这些细胞的发育、通路、转录因子和细胞因子响应有没有变。00–06 是质控和命名。建议按 07 → 11 读结论，需要时再回头看注释细节。
+    分析在问：急性脑梗后颅骨骨髓里中性粒细胞和前体比例有没有升高；升高之后这些细胞的发育、通路、转录因子和细胞因子响应有没有变。07 看组成，08–11 看状态。00–06 是质控和命名。建议按 07 → 11 读结论，需要时再回头看注释。
   </div>
 
   <h2>读图时注意</h2>
@@ -57,10 +64,6 @@
     <li>热图蓝低红高。均值热图是相对高低，不是蛋白定量。Δ 热图是 ACI 减去 CTRL，红表示 ACI 更高。</li>
     <li>UMAP 上靠近表示转录组更像，一般不是时间轴。发育先后看 08。</li>
   </ul>
-
-  <div class="warn">
-    这批数据只有颅骨骨髓，没有配对外周血或脑实质，也没有蛋白或空间数据。性别和年龄用于选对照，没有放进统计模型。PROGENy、转录因子、CytoSig 都是从 RNA 推断的活性，不是 ELISA 或磷酸化检测。08 的拟时间还没有接到 09–11 的统计里。
-  </div>
 
   <h2>报告</h2>
   <ol>
@@ -79,6 +82,23 @@
     <li><a href="10_neut_decouple.html">10 转录因子</a> — 哪些 TF 随发育升降、两组是否不同。</li>
     <li><a href="11_cytosig.html">11 CytoSig</a> — 转录组看起来像被哪些细胞因子作用过，不是直接测到的浓度。</li>
   </ol>
+
+  <h2>现有数据还可以再挖</h2>
+  <ul>
+    <li>细胞通讯（CellChat / NicheNet 一类）：中性粒被谁影响、又影响谁，在骨髓微环境里怎么改其他细胞的状态。</li>
+    <li>按亚型做样本级差异基因（pseudobulk），再和 09–11 的通路 / TF / 细胞因子结果对上。</li>
+    <li>把 08 的拟时间接到 09–11：看通路和 TF 是沿发育轴变，还是两组在同一阶段就不同。</li>
+    <li>组成和活性一起看：哪例中性粒占比高，是不是同时某条细胞因子响应也高。</li>
+  </ul>
+
+  <h2>以后补数据和实验可以围绕什么</h2>
+  <p>最好先补能拆开「疾病 vs 平台」的数据：同一实验室、同一套取样和建库，CTRL 和 ACI 都用 3′ 或都用 5′。有条件再配对外周血、脑实质或脑膜，看颅骨骨髓的变化是不是系统性的。</p>
+  <ul>
+    <li>测序拓展：CITE-seq 或蛋白验证；空间转录组看中性粒和其他细胞的位置关系；加大例数，把年龄、性别放进模型。</li>
+    <li>功能实验：骨髓上清或血浆的 G-CSF、IFN 等 ELISA；体外刺激中性粒 / GMP，看能否复现 09–11 里的通路和细胞因子签名；ROS、NETosis、迁移等功能读出。</li>
+    <li>机制实验：共培养或条件培养基，看中性粒如何影响 HSPC 或其他免疫细胞；对通讯分析里排到前面的配体–受体做阻断或敲低。</li>
+  </ul>
+  <p>PROGENy、转录因子、CytoSig 都是从 RNA 推断的活性，不是 ELISA 或磷酸化检测。08 的拟时间目前还没有接到 09–11 的统计里。性别和年龄用于选对照，没有放进统计模型。没有配对外周血、脑实质，也没有蛋白或空间数据。</p>
 
   <p class="note">代码：<a href="https://github.com/jha14/stroke_bm">github.com/jha14/stroke_bm</a>。建议看这些 HTML，不必打开 <code>.qmd</code>。</p>
 </body>

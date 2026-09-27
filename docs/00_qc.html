@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Quality Control</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>质控。先有 ACI 5 例，再按性别、年龄匹配选了 CTRL 6 例（名单见报告首页）。这里去掉空液滴、双细胞和线粒体过高的细胞。某一例过滤后掉得特别多，优先考虑文库质量。这一步不回答组成问题。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>质控。先有 ACI 5 例，再按性别、年龄匹配选了 CTRL 6 例。CTRL 全是 5′、ACI 全是 3′，而且不是同一实验室、同一批次取的（见首页）。这里去掉空液滴、双细胞和线粒体过高的细胞。某一例掉得特别多，优先考虑文库质量。</p></div>
+
 
 
 </div>
@@ -2251,7 +2252,8 @@ margin-bottom: 6px !important;
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;codes/functions.R&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="load-data" class="level3">
-<h3 class="anchored" data-anchor-id="load-data">1. Load Data</h3>
+<h3 class="anchored" data-anchor-id="load-data">1. Load Data</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">读入 11 例 10x 矩阵，写上分组、性别、年龄。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>all_data <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2325,7 +2327,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="merge-layers" class="level3">
-<h3 class="anchored" data-anchor-id="merge-layers">2. Merge Layers</h3>
+<h3 class="anchored" data-anchor-id="merge-layers">2. Merge Layers</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">合成一个对象，方便后面统一质控。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>all_data <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">&quot;data/rdata/preprocess/all_data.qs2&quot;</span>, <span class="at">nthreads =</span> <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -2413,7 +2416,8 @@ aci_5_AAACCAAAGCAATCGC-1       aci_5  ACI-5</code></pre>
 </div>
 </section>
 <section id="calcuate-qc" class="level3">
-<h3 class="anchored" data-anchor-id="calcuate-qc">3. Calcuate QC</h3>
+<h3 class="anchored" data-anchor-id="calcuate-qc">3. Calcuate QC</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">算每个细胞的基因数、UMI、线粒体和核糖体比例。线粒体很高常见于濒死或破膜细胞。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span>(<span class="st">&quot;^MT-&quot;</span>, <span class="fu">rownames</span>(all_data_qc), <span class="at">value =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -2634,7 +2638,8 @@ Vcells 23551927 179.7  991233340 7562.6 1232058104 9399.9</code></pre>
 </div>
 </section>
 <section id="detection-based-filtering" class="level3">
-<h3 class="anchored" data-anchor-id="detection-based-filtering">4. Detection-based Filtering</h3>
+<h3 class="anchored" data-anchor-id="detection-based-filtering">4. Detection-based Filtering</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">按检出基因数和 UMI 去掉空液滴、信息量太低的细胞。看各样本剩下多少，有没有某一例被削得很狠。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>all_data_qc <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">&quot;data/rdata/preprocess/all_data_qc.qs2&quot;</span>, <span class="at">nthreads =</span> <span class="dv">10</span>)</span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(all_data_qc)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2722,7 +2727,8 @@ Vcells 23551927 179.7  991233340 7562.6 1232058104 9399.9</code></pre>
 </div>
 </section>
 <section id="mitoribo-filtering" class="level3">
-<h3 class="anchored" data-anchor-id="mitoribo-filtering">5. Mito/Ribo Filtering</h3>
+<h3 class="anchored" data-anchor-id="mitoribo-filtering">5. Mito/Ribo Filtering</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">再按线粒体、核糖体比例过滤。阈值是经验性的，目的是去掉明显差的细胞，不是疾病分组。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>selected_mito <span class="ot">&lt;-</span> <span class="fu">WhichCells</span>(</span>
 <span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>  data_filt_qc,</span>
@@ -2804,7 +2810,8 @@ Vcells 160602711 1225.4  792986672 6050.1 1232058104 9399.9</code></pre>
 </div>
 </section>
 <section id="skipped-check-sample-sex" class="level3">
-<h3 class="anchored" data-anchor-id="skipped-check-sample-sex">(Skipped) Check Sample Sex</h3>
+<h3 class="anchored" data-anchor-id="skipped-check-sample-sex">(Skipped) Check Sample Sex</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">临床已有性别，这段没跑。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="co"># suppressMessages(require(biomaRt))</span></span>
 <span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a><span class="co"># mart &lt;- useMart(&quot;ENSEMBL_MART_ENSEMBL&quot;, dataset = &quot;hsapiens_gene_ensembl&quot;)</span></span>
@@ -2837,7 +2844,8 @@ Vcells 160602711 1225.4  792986672 6050.1 1232058104 9399.9</code></pre>
 </div>
 </section>
 <section id="cell-cycle-score" class="level3">
-<h3 class="anchored" data-anchor-id="cell-cycle-score">6. Cell Cycle Score</h3>
+<h3 class="anchored" data-anchor-id="cell-cycle-score">6. Cell Cycle Score</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">给每个细胞打一个周期分数，后面作图用。没有强制从表达里回归掉周期。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="co"># data_filt_qc &lt;- qs_read(&quot;data/rdata/preprocess/data_filt_qc.qs2&quot;, nthreads = 10) # nolint</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -2890,7 +2898,8 @@ Vcells 160602711 1225.4  792986672 6050.1 1232058104 9399.9</code></pre>
 </div>
 </section>
 <section id="predict-doublets" class="level3">
-<h3 class="anchored" data-anchor-id="predict-doublets">7. Predict Doublets</h3>
+<h3 class="anchored" data-anchor-id="predict-doublets">7. Predict Doublets</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">预测两个细胞粘在一起的液滴。双细胞会把两种 marker 叠在同一个点上，干扰命名。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a>data_prep <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(</span>
 <span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;data/rdata/preprocess/data_filt_qc.qs2&quot;</span>,</span>
@@ -2918,7 +2927,8 @@ Vcells 160602711 1225.4  792986672 6050.1 1232058104 9399.9</code></pre>
 </div>
 </section>
 <section id="prepare-final-data" class="level3">
-<h3 class="anchored" data-anchor-id="prepare-final-data">8. Prepare Final Data</h3>
+<h3 class="anchored" data-anchor-id="prepare-final-data">8. Prepare Final Data</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">写出质控后的对象，后面聚类都读这份。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a>data_prep <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(</span>
 <span id="cb92-2"><a href="#cb92-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;data/rdata/preprocess/data_prep.qs2&quot;</span>,</span>

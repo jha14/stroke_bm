@@ -23,12 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。09–11 仍按亚型阶段统计，还没用这条拟时间数值。
-
-
-骨髓中性粒发育：GMP → Promyelocyte → Pre-Neut → 成熟 Neut。GMP 是粒单祖细胞，也是这条路上 ACI 上调的前体，所以并入轨迹，不单用 Pre-Neut / Neut。细胞集合变了，必须重新 Normalize / HVG / PCA / Harmony / UMAP。不重新聚类，亚型用 `06` 的 `annot_sub`。
-
-本脚本只做：CytoTRACE2 潜能、diffusion map、PHATE、slingshot。对照写法见 NMOSD `trajectory.R`。`group` 以 **CTRL** 为对照。
+看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。09–11 仍按亚型阶段统计，还没用这条拟时间。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -138,6 +133,8 @@ wilcox_ctrl_aci <- function(score, group) {
 ```
 
 ### 1. Subset GMP + neutrophil lineage
+<!-- step-note -->
+只留 GMP 和中性粒这条发育路上的细胞。
 
 从 `seurat_object_final.qs2` 取 GMP 和全部 Pre-Neut / Neut 亚型。
 
@@ -169,6 +166,8 @@ Layers(seurat_object)
 ```
 
 ### 2. Normalize, HVG, Scale, PCA, Harmony
+<!-- step-note -->
+集合变了，重做降维和整合，不重新聚类，亚型沿用 06。
 
 和 05 / 06 一样：HVG 3000；PCA 去掉 MT / 核糖体 / HSP / DNAJ / HIST / ZFP36 以及 IG / TR；`ScaleData` 不 regress；Harmony 按 `sample`。
 
@@ -260,6 +259,8 @@ seurat_object <- RunUMAP(
 ```
 
 ### 3. Annotation UMAP
+<!-- step-note -->
+看这条路上各亚型是否按 GMP → 早幼粒 → Pre-Neut → 成熟粒排开。
 
 ```{r message=FALSE, warning=FALSE}
 plot_umap_short(
@@ -324,10 +325,14 @@ ggsave(
 ```
 
 ### 4. CytoTRACE2
+<!-- step-note -->
+分数高更「早」、更不成熟。成熟粒应偏低。两组颜色叠在一起，看的是发育早晚，不是疾病标签。
 
 高分更像未成熟细胞。请同时看按亚型上色和按组别上色：若 ACI 只是「成熟粒更多」则平均潜能会下降，那是组成变化，不一定是同一种细胞变幼稚。
 
 ### 5. Diffusion map
+<!-- step-note -->
+另一种摊平方法，用来看是不是拉成一条轴，而不是好几团。
 
 细胞水平 Wilcoxon 会被组成分牵着走（ACI 成熟中性粒更多）。样本水平是每个样本的中位数再比组；亚型内比较更干净。样本至少 `min_cells_sample` 个细胞才进样本水平。
 
@@ -558,6 +563,8 @@ ggsave(
 ```
 
 ### 5. Diffusion map
+<!-- step-note -->
+另一种摊平方法，用来看是不是拉成一条轴，而不是好几团。
 
 Harmony 前 `n_dims` 维，destiny `DiffusionMap`。
 
@@ -596,6 +603,8 @@ ggsave(file.path(res_path, "04_dm_cytotrace.pdf"), width = 8, height = 7, dpi = 
 ```
 
 ### 6. PHATE
+<!-- step-note -->
+再换一种可视化，交叉核对轴是否稳定。
 
 同样用 Harmony 前 `n_dims` 维。
 
@@ -641,6 +650,8 @@ ggsave(file.path(res_path, "05_phate_cytotrace.pdf"), width = 8, height = 7, dpi
 ```
 
 ### 7. Slingshot
+<!-- step-note -->
+在图上画拟时间曲线。拟时间是转录组距离，不是小时。目前没有接到 09–11。
 
 在官方 UMAP（`umap`，dims 1:`n_dims`）上推断，起点 **GMP**。`stretch = 0` 同参考脚本。不做 tradeSeq / 伪时间组间密度。
 

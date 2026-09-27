@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Clustering</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>聚类：把转录组相近的细胞聚在一起，后面才能命名。Harmony 用来减弱样本间的技术差异。UMAP 只是二维展示，靠近不等于发育先后。按样本上色应混在一起，而不是各占一块。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>聚类：把转录组相近的细胞聚在一起。先看不整合时样本散不散，再用 Harmony 减弱样本间技术差异。UMAP 靠近不等于发育先后。分组和 5′/3′ 完全叠在一起，整合消不掉平台差异。</p></div>
+
 
 
 </div>
@@ -2265,7 +2266,8 @@ margin-bottom: 6px !important;
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>max_cutoff <span class="ot">&lt;-</span> <span class="st">&quot;q90&quot;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="load-gene-info" class="level3">
-<h3 class="anchored" data-anchor-id="load-gene-info">0. Load Gene Info</h3>
+<h3 class="anchored" data-anchor-id="load-gene-info">0. Load Gene Info</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">基因注释（线粒体、核糖体、IG/TR 等），后面排除基因和高变基因会用到。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>genes_type <span class="ot">&lt;-</span> </span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read_tsv</span>(<span class="st">&quot;data/tx_to_genes_cr_2024a.txt&quot;</span>) <span class="sc">|&gt;</span></span>
@@ -2291,7 +2293,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="data-preparation" class="level3">
-<h3 class="anchored" data-anchor-id="data-preparation">1. data Preparation</h3>
+<h3 class="anchored" data-anchor-id="data-preparation">1. data Preparation</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">接上质控后的 counts，准备降维。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span> <span class="fu">qs_read</span>(<span class="st">&quot;data/rdata/preprocess/data_prep.qs2&quot;</span>, <span class="at">nthreads =</span> <span class="dv">10</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">DefaultAssay</span>(seurat_object)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2341,7 +2344,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="without-integration" class="level3">
-<h3 class="anchored" data-anchor-id="without-integration">2. Without Integration</h3>
+<h3 class="anchored" data-anchor-id="without-integration">2. Without Integration</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">先看不校正批次时样本在图上散不散。如果各占一块，后面才需要 Harmony。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Layers</span>(seurat_object)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -2513,7 +2517,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="dimentionality-reduction-without-integration" class="level3">
-<h3 class="anchored" data-anchor-id="dimentionality-reduction-without-integration">3. Dimentionality Reduction without Integration</h3>
+<h3 class="anchored" data-anchor-id="dimentionality-reduction-without-integration">3. Dimentionality Reduction without Integration</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">不整合时的 PCA / UMAP，用来对照整合效果。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span></span>
 <span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">RunUMAP</span>(</span>
@@ -2575,7 +2580,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="with-integration" class="level3">
-<h3 class="anchored" data-anchor-id="with-integration">4. With integration</h3>
+<h3 class="anchored" data-anchor-id="with-integration">4. With integration</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">Harmony 按样本整合。看整合后各样本是否混开；疾病分组仍可能分开，但其中叠着 5′/3′。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tic</span>(<span class="st">&quot;Harmony integration&quot;</span>)</span>
 <span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span></span>
@@ -2925,7 +2931,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="visualization-of-integration" class="level3">
-<h3 class="anchored" data-anchor-id="visualization-of-integration">5. Visualization of Integration</h3>
+<h3 class="anchored" data-anchor-id="visualization-of-integration">5. Visualization of Integration</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">核对整合后的 UMAP：样本应尽量混，cluster 应成团。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span></span>
 <span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">qs_read</span>(</span>
@@ -3000,7 +3007,8 @@ margin-bottom: 6px !important;
 </div>
 </section>
 <section id="level-1-clustering" class="level3">
-<h3 class="anchored" data-anchor-id="level-1-clustering">6. Level 1 Clustering</h3>
+<h3 class="anchored" data-anchor-id="level-1-clustering">6. Level 1 Clustering</h3><p class="step-note" style="color:#52606d;margin:6px 0 10px;">在整合后的图上聚类。分辨率越大簇越碎。这一步给 04 起大类名用。</p>
+
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>seurat_object <span class="ot">&lt;-</span></span>
 <span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FindNeighbors</span>(</span>
