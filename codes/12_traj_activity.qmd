@@ -45,7 +45,7 @@ if (dir.exists(res_path)) {
   dir.create(res_path, recursive = TRUE)
 }
 
-n_tf_top <- 20
+n_tf_top <- 30
 n_ck_top <- 12
 n_bins <- 6
 traj_levels <- c(
@@ -223,7 +223,7 @@ tf_rho <- pt_assoc(dat_tf, "pt", tf_top)
 write_csv(tf_rho, file.path(res_path, "03_tf_pt_spearman.csv"))
 
 p_tf <- plot_pt_smooth(dat_tf, "pt", tf_top, ncol = 5, ylab = "CollecTRI ulm")
-ggsave(file.path(res_path, "03_tf_pt_smooth.pdf"), p_tf, width = 14, height = 10, dpi = 600)
+ggsave(file.path(res_path, "03_tf_pt_smooth.pdf"), p_tf, width = 16, height = 14, dpi = 600)
 p_tf
 ```
 
@@ -241,7 +241,7 @@ p_tf_d <- ggplot(bin_tf, aes(x = stratum, y = feature, fill = delta_aci_minus_ct
   xlab("PT bin (b1 early → b6 late)") +
   ylab(NULL) +
   ggtitle("TF sample median: ACI − CTRL")
-ggsave(file.path(res_path, "03_tf_pt_bin_delta.pdf"), p_tf_d, width = 8, height = 7, dpi = 600)
+ggsave(file.path(res_path, "03_tf_pt_bin_delta.pdf"), p_tf_d, width = 8, height = 9, dpi = 600)
 p_tf_d
 print(dplyr::filter(bin_tf, .data$p < 0.05))
 ```

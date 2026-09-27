@@ -49,7 +49,7 @@ if (dir.exists(res_path)) {
 }
 if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
 
-n_tf_top <- 20
+n_tf_top <- 30
 traj_levels <- c(
   "GMP",
   "Promyelocyte", "MMP8 Pre-Neut", "MMP9 Pre-Neut",
@@ -115,7 +115,7 @@ length(tfs)
 <!-- step-note -->
 先找随 GMP→成熟粒变化最大的 TF，避免一千个 TF 一起报。
 
-只展示和阶段相关最强的 20 个 TF，不是「只有这 20 个重要」。在 Kruskal BH < 0.05 里按 |ρ| 取 `r n_tf_top`；不够就按 |ρ| 硬取。
+只展示和阶段相关最强的 30 个 TF，不是「只有这 30 个重要」。在 Kruskal BH < 0.05 里按 |ρ| 取 `r n_tf_top`；不够就按 |ρ| 硬取。
 
 ```{r message=FALSE, warning=FALSE}
 tf_stage <- stage_assoc(dat_tf, tfs, "annot_sub")
@@ -133,7 +133,7 @@ print(tf_keep)
 mean_tf <- mean_by_scaled(dat_tf, tf_top, "annot_sub")
 p_hm_tf <- plot_heatmap_mean(mean_tf, tf_top, row_col = "annot_sub") +
   scale_x_discrete(limits = traj_levels)
-ggsave(file.path(res_path, "01_tf_heatmap_stage.pdf"), p_hm_tf, width = 8, height = 7, dpi = 600)
+ggsave(file.path(res_path, "01_tf_heatmap_stage.pdf"), p_hm_tf, width = 8, height = 9, dpi = 600)
 p_hm_tf
 ```
 
@@ -145,7 +145,7 @@ long_tf$tf <- factor(long_tf$tf, levels = tf_top)
 long_tf$annot_sub <- factor(long_tf$annot_sub, levels = traj_levels)
 p_box_tf <- ggplot(long_tf, aes(x = annot_sub, y = score, fill = annot_sub)) +
   geom_boxplot(outlier.size = 0.12, width = 0.7) +
-  facet_wrap(~tf, scales = "free_y", ncol = 5) +
+  facet_wrap(~tf, scales = "free_y", ncol = 6) +
   scale_fill_manual(values = traj_col) +
   theme_classic() +
   theme(
@@ -154,7 +154,7 @@ p_box_tf <- ggplot(long_tf, aes(x = annot_sub, y = score, fill = annot_sub)) +
   ) +
   xlab(NULL) +
   ylab("CollecTRI ulm")
-ggsave(file.path(res_path, "01_tf_box_stage.pdf"), p_box_tf, width = 14, height = 10, dpi = 600)
+ggsave(file.path(res_path, "01_tf_box_stage.pdf"), p_box_tf, width = 16, height = 12, dpi = 600)
 ```
 
 ### 3. CTRL vs ACI（top TF）
@@ -194,7 +194,7 @@ p_tf_d <- ggplot(
   xlab(NULL) +
   ylab(NULL) +
   ggtitle("Top TF sample-level ACI − CTRL (Wilcoxon p)")
-ggsave(file.path(res_path, "02_tf_heatmap_sample_delta.pdf"), p_tf_d, width = 8, height = 7, dpi = 600)
+ggsave(file.path(res_path, "02_tf_heatmap_sample_delta.pdf"), p_tf_d, width = 8, height = 9, dpi = 600)
 p_tf_d
 ```
 
@@ -216,7 +216,7 @@ p_tf_g <- ggplot(long_g, aes(x = annot_sub, y = feature, fill = mean)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9)) +
   xlab(NULL) +
   ylab(NULL)
-ggsave(file.path(res_path, "02_tf_heatmap_stage_group.pdf"), p_tf_g, width = 12, height = 7, dpi = 600)
+ggsave(file.path(res_path, "02_tf_heatmap_stage_group.pdf"), p_tf_g, width = 12, height = 9, dpi = 600)
 p_tf_g
 ```
 

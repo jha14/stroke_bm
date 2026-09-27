@@ -21,7 +21,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-干祖自己的发育轴，和 08 中性粒轴分开。看 HSC 是不是还连到 MEP、GMP、MDP；ACI 有没有更偏向粒系（GMP）。CytoTRACE2 高分更早。拟时间不是小时。09–11 / 12 还没接到这条轴上。分组仍叠着 5′/3′。
+干祖自己的发育轴，和 08 中性粒轴分开。Slingshot 在 Harmony 空间里拟合，强制从 **HSC** 出发、在 MEP / GMP / MDP 结束，再把曲线嵌回 UMAP 方便看。UMAP 上 HSC 往往在分叉中间，不像「从角落出发」，那是投影，不是起点错了。拟时间不是小时。09–11 / 12 还没接到这条轴上。分组仍叠着 5′/3′。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -244,22 +244,38 @@ print(cyto_test)
 
 ### 5. Slingshot
 <!-- step-note -->
-起点 HSC。若推断出多条 lineage，看 GMP 那条是不是 ACI 更占。拟时间是转录组距离。不做 tradeSeq。
+在 Harmony（20 维）上拟合，起点 HSC，终点 MEP、GMP、MDP。曲线再嵌到 UMAP 上画。黑点标 HSC 中心；箭头在终点。若某条 lineage 的拟时间中位数 HSC 不是最低，这条轴不可信。
 
 ```{r message=FALSE, warning=FALSE}
 sling <- list()
+sling$dimred_fit <- Embeddings(seurat_object, "harmony")[, 1:n_dims]
 sling$dimred <- Embeddings(seurat_object, "umap")[, 1:2]
 sling$clustering <- seurat_object$annot_sub
-sling$slingshot <- slingshot(
-  sling$dimred,
+sling$slingshot_fit <- slingshot(
+  sling$dimred_fit,
   sling$clustering,
   start.clus = "HSC",
+  end.clus = c("MEP", "GMP", "MDP"),
   stretch = 0
 )
+print(slingLineages(sling$slingshot_fit))
+lin_ok <- vapply(
+  slingLineages(sling$slingshot_fit),
+  function(x) identical(x[[1]], "HSC"),
+  logical(1)
+)
+if (!all(lin_ok)) {
+  lin_txt <- vapply(
+    slingLineages(sling$slingshot_fit),
+    function(x) paste(x, collapse = ">"),
+    character(1)
+  )
+  stop("Slingshot lineages do not all start at HSC: ", paste(lin_txt, collapse = "; "))
+}
+sling$slingshot <- embedCurves(sling$slingshot_fit, sling$dimred)
 sling$curves <- slingCurves(sling$slingshot, as.df = TRUE)
-sling$pseudotime <- as.data.frame(slingPseudotime(sling$slingshot))
-stopifnot(identical(rownames(sling$dimred), colnames(seurat_object)))
-print(slingLineages(sling$slingshot))
+sling$pseudotime <- as.data.frame(slingPseudotime(sling$slingshot_fit))
+stopifnot(identical(rownames(sling$dimred_fit), colnames(seurat_object)))
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -270,6 +286,12 @@ for (ln in pt_cols) {
 
 curve_xy <- sling$curves
 xy <- intersect(colnames(curve_xy), c("umap_1", "UMAP_1", "umap_2", "UMAP_2"))
+if (length(xy) < 2) {
+  xy <- setdiff(
+    names(curve_xy)[vapply(curve_xy, is.numeric, logical(1))],
+    c("Order", "Lineage")
+  )[1:2]
+}
 stopifnot(length(xy) >= 2)
 curve_xy <- curve_xy |>
   dplyr::rename(x = dplyr::all_of(xy[1]), y = dplyr::all_of(xy[2]))
@@ -278,6 +300,8 @@ lab_df <- curve_xy |>
   dplyr::slice_max(order_by = .data$Order, n = 1, with_ties = FALSE) |>
   dplyr::ungroup() |>
   dplyr::mutate(lab = paste0("L", Lineage))
+hsc_xy <- sling$dimred[as.character(sling$clustering) == "HSC", , drop = FALSE]
+start_df <- data.frame(x = mean(hsc_xy[, 1]), y = mean(hsc_xy[, 2]))
 
 plot_df <- as.data.frame(sling$dimred) |>
   mutate(annot_sub = sling$clustering)
@@ -291,6 +315,16 @@ p_sling <- ggplot(plot_df, aes(.data[[x_umap]], .data[[y_umap]])) +
     aes(x = x, y = y, group = Lineage),
     arrow = arrow(type = "closed", length = unit(0.35, "cm")),
     linewidth = 1.1
+  ) +
+  geom_point(
+    data = start_df, aes(x = x, y = y),
+    inherit.aes = FALSE,
+    size = 4, shape = 21, fill = "white", color = "black", stroke = 1.1
+  ) +
+  geom_text(
+    data = start_df, aes(x = x, y = y),
+    inherit.aes = FALSE,
+    label = "start HSC", fontface = "bold", size = 3.5, vjust = -1.2
   ) +
   geom_text(
     data = lab_df, aes(x = x, y = y, label = lab),
@@ -311,15 +345,39 @@ p_sling
 
 ```{r message=FALSE, warning=FALSE}
 if (length(pt_cols) > 0) {
-  FeaturePlot(
-    seurat_object, reduction = "umap", features = paste0("sling_", pt_cols[1]),
-    pt.size = pt_size, raster = raster, raster.dpi = raster_dpi
-  ) + theme(aspect.ratio = 1)
-  ggsave(
-    file.path(res_path, "03_slingshot_pt_l1.pdf"),
-    width = 8, height = 7, dpi = 600
-  )
+  for (ln in pt_cols) {
+    FeaturePlot(
+      seurat_object, reduction = "umap", features = paste0("sling_", ln),
+      pt.size = pt_size, raster = raster, raster.dpi = raster_dpi
+    ) + theme(aspect.ratio = 1)
+    ggsave(
+      file.path(res_path, paste0("03_slingshot_pt_", ln, ".pdf")),
+      width = 8, height = 7, dpi = 600
+    )
+  }
 }
+
+pt_long <- FetchData(
+  seurat_object,
+  vars = c("annot_sub", paste0("sling_", pt_cols))
+) |>
+  tidyr::pivot_longer(
+    dplyr::all_of(paste0("sling_", pt_cols)),
+    names_to = "lineage", values_to = "pt"
+  )
+p_pt_box <- ggplot(pt_long, aes(x = annot_sub, y = pt, fill = annot_sub)) +
+  geom_boxplot(outlier.size = 0.15, width = 0.7, na.rm = TRUE) +
+  facet_wrap(~lineage) +
+  scale_fill_manual(values = traj_col) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  xlab(NULL) +
+  ylab("Pseudotime")
+ggsave(file.path(res_path, "03_pt_by_subtype.pdf"), p_pt_box, width = 10, height = 4.2, dpi = 600)
+p_pt_box
 
 hspc_meta <- FetchData(
   seurat_object,
@@ -360,9 +418,11 @@ p_fate <- ggplot(fate, aes(x = group, y = frac, fill = group)) +
 ggsave(file.path(res_path, "03_fate_frac.pdf"), p_fate, width = 9, height = 4.5, dpi = 600)
 p_fate
 
+sample_group <- dplyr::distinct(hspc_meta, sample, group)
 fate_test <- fate |>
+  dplyr::select(-group) |>
   tidyr::complete(sample, lineage_end, fill = list(frac = 0, n = 0)) |>
-  dplyr::left_join(dplyr::distinct(hspc_meta, sample, group), by = "sample") |>
+  dplyr::left_join(sample_group, by = "sample") |>
   dplyr::group_by(lineage_end) |>
   dplyr::group_modify(function(d, k) {
     wilcox_ctrl_aci(d$frac, d$group)
