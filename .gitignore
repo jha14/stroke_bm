@@ -11,5 +11,6 @@ results_backup/
 codes_backup/
 celltypist/
 *.html
+!docs/*.html
 *_files/
 .DS_Store

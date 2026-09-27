@@ -1,14 +1,16 @@
 # stroke_bm
 
-Skull bone-marrow scRNA-seq (CTRL vs ACI). Analysis scripts only.
+Skull bone-marrow scRNA-seq (CTRL vs ACI).
+
+**Reports (GitHub Pages):** https://jha14.github.io/stroke_bm/
 
 ## GitHub rendering
 
-- **`.ipynb`**: GitHub shows executed notebooks in the file viewer.
-- **`.qmd`**: GitHub shows source text only. It does **not** run R/Python chunks or produce the HTML report.
-- **`.html`**: opening an HTML file on GitHub shows source, not the report. To view Quarto output in a browser, use [GitHub Pages](https://pages.github.com/) or open the HTML locally after `quarto render`.
+- **Pages HTML**: open the link above. Colleagues can read the Quarto/notebook reports in a browser.
+- **`.ipynb`**: GitHub also previews notebooks in the file viewer.
+- **`.qmd`**: GitHub shows source only; it does not run chunks.
 
-This repo therefore keeps **source** (`codes/*.qmd`, `codes/*.ipynb`, `codes/*.R`). Rendered HTML, `data/`, and `results/` are not committed.
+Source stays in `codes/`. Rendered HTML is copied to `docs/` for Pages. `data/` and `results/` are not in the repo.
 
 ## Layout
 
