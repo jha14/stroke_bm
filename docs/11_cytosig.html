@@ -2240,6 +2240,11 @@ ul, ol {
 margin-bottom: 6px !important;
 }
 </style>
+<!-- reader-guide -->
+<p><strong>这篇在故事里的位置：</strong> 细胞的转录组「像刚被哪种细胞因子训练过」。这是<strong>推断的细胞因子响应</strong>，不是骨髓上清 ELISA。先看所有大类，再聚焦中性粒谱系（含 GMP 前体）。</p>
+<p><strong>怎么读热图：</strong> 与 09 相同：均值热图用跨细胞 z-score；组间热图用 ACI−CTRL。</p>
+<p><strong>怎么读 lollipop：</strong> 每个点一种细胞因子，高度 = 患者级 ACI 减 CTRL。红 = ACI 显著更高，蓝 = 显著更低，灰 = 不显著。从左到右按差值从高到低。<strong>请把这张当 11 的主图</strong>，亚型热图用来看信号是停在 Pre-Neut 还是成熟粒。</p>
+<p><strong>nrand=0：</strong> 没有做 CytoSig 自带的随机置换 p；我们用自己的 Wilcoxon 比较两组。</p>
 <p>全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 <code>08</code> 一致）做亚型分析。conda <strong>cytosig</strong>。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，<strong>样本级原始 p</strong>。Lollipop 样式同 arhgap35 <code>analysis.R</code> 的 <code>ggdotchart</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。<code>nrand=0</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
@@ -2599,7 +2604,7 @@ margin-bottom: 6px !important;
 </section>
 <section id="中性粒谱系总体lollipop" class="level3">
 <h3 class="anchored" data-anchor-id="中性粒谱系总体lollipop">5. 中性粒谱系总体：lollipop</h3>
-<p>谱系细胞合计，样本级原始 p（主图），细胞级 BH 作对照。按 ACI−CTRL 从高到低。</p>
+<p><strong>主图。</strong> 红点 = ACI 患者级显著更高的细胞因子响应。先看 IFN / 集落刺激因子是否在红侧，再对照亚型热图定位阶段。谱系细胞合计，样本级原始 p，细胞级 BH 作对照。按 ACI−CTRL 从高到低。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>ck_cell_lineage <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(<span class="fu">cell_group_tests</span>(dat_neut, ck))</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>ck_med_lineage <span class="ot">&lt;-</span> <span class="fu">sample_medians</span>(dat_neut, ck)</span>
@@ -2661,6 +2666,7 @@ margin-bottom: 6px !important;
 </section>
 <section id="中性粒亚型ctrl-vs-aci" class="level3">
 <h3 class="anchored" data-anchor-id="中性粒亚型ctrl-vs-aci">6. 中性粒亚型：CTRL vs ACI</h3>
+<p>看信号是停在前体还是成熟粒。患者级为主。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>ck_cell_sub <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(<span class="fu">cell_group_tests</span>(dat_neut, ck, <span class="at">strata_col =</span> <span class="st">&quot;annot_sub&quot;</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">annot_sub =</span> <span class="fu">factor</span>(.data<span class="sc">$</span>stratum, <span class="at">levels =</span> traj_levels))</span>

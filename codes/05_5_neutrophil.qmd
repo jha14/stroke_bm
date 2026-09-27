@@ -22,6 +22,13 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇在故事里的位置：** 中性粒亚型命名（早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒）。**请认真看这一篇的最终命名和 marker 点图**，07–11 都用这些名字。
+
+CellTypist 常把骨髓中性粒标成单核，忽略即可。GMP 在 HSPC 篇，08 再和中性粒并到一起。
+
+**给实验同事：** 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 **06 的 annot 点图** 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。
+
 
 第一轮只 subset `Neut` + `Pre-Neut`，不自动并入 HSPC cluster 21。GMP / promyelocyte barcode 确认后再另存。低质量 / doublet 留给 round 2。CellTypist 常把骨髓中性粒标成单核，只作参考。
 

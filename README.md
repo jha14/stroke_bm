@@ -1,8 +1,12 @@
 # stroke_bm
 
-Skull bone-marrow scRNA-seq (CTRL vs ACI).
+颅骨骨髓单细胞转录组（对照 CTRL 6 例 vs 急性脑梗死 ACI 5 例）。
 
-**Reports (GitHub Pages):** https://jha14.github.io/stroke_bm/
+**请合作者先打开报告首页（中文导读）：** https://jha14.github.io/stroke_bm/
+
+科学问题：急性脑梗后颅骨骨髓中性粒细胞是否扩增；扩增之后通路、转录因子和细胞因子响应有没有变。00–06 是质控和注释，07 看组成，08–11 看中性粒状态。
+
+**怎么读 p 值和热图：** 见首页。一句话：组间结论看**患者级**（每例一个点），不要看细胞级 Wilcoxon。
 
 ## GitHub rendering
 

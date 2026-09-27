@@ -22,6 +22,11 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇：** T 与 NK。TCR 基因不进 PCA，以免克隆型把聚类带跑。
+
+**给实验同事：** 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 **06 的 annot 点图** 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。
+
 
 Level-1 `T/NK`。Scale / PCA / clustering **排除 TR 基因**，避免 TCR 克隆型主导分群。cluster 20 的混合在 subtype 里拆开。CellTypist 只作参考。
 

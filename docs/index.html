@@ -1,43 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>stroke_bm reports</title>
+  <title>stroke_bm 报告导读</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2.5rem auto; padding: 0 1.2rem; line-height: 1.45; color: #1f2933; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.3rem; }
+    body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2.2rem auto; padding: 0 1.2rem; line-height: 1.55; color: #1f2933; }
+    h1 { font-size: 1.55rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.15rem; margin-top: 1.8rem; }
     p.lead { color: #52606d; margin-top: 0; }
     ol { padding-left: 1.2rem; }
-    li { margin: 0.35rem 0; }
+    li { margin: 0.32rem 0; }
     a { color: #0b69a3; }
-    .note { font-size: 0.9rem; color: #627d98; margin-top: 2rem; }
+    .note { font-size: 0.92rem; color: #627d98; margin-top: 1.8rem; }
+    .guide { background: #f4f7fb; border-left: 4px solid #7EB8E8; padding: 10px 14px; margin: 12px 0; }
+    .warn { background: #fff6f0; border-left: 4px solid #F07A7A; padding: 10px 14px; margin: 12px 0; }
+    code { font-size: 0.9em; }
   </style>
 </head>
 <body>
-  <h1>stroke_bm</h1>
-  <p class="lead">Skull bone-marrow scRNA-seq (CTRL vs ACI). Rendered Quarto / notebook reports.</p>
+  <h1>颅骨骨髓 scRNA-seq（CTRL vs ACI）</h1>
+  <p class="lead">给实验背景同事 / 学生的阅读入口。蓝色 = 对照 CTRL（6 例），红色 = 急性脑梗死 ACI（5 例）。所有组间比较都以 <strong>CTRL 为对照</strong>。</p>
+
+  <div class="guide">
+    <strong>故事线（请按这个顺序读 07 → 11）。</strong>
+    急性脑梗后，颅骨骨髓里中性粒细胞（及前体）比例升高。后续不问「有没有扩增」（那是 07），而问扩增的中性粒<strong>状态变了没有</strong>：发育轨迹（08）、通路活性 PROGENy（09）、转录因子（10）、细胞因子反应 CytoSig（11）。00–06 是把细胞认准、把图做干净，不是主结论。
+  </div>
+
+  <h2>怎么读图和 p 值（必读）</h2>
+  <ul>
+    <li><strong>细胞级 vs 患者级：</strong>一张 UMAP 上每个点是一个细胞。Wilcoxon 如果拿「所有细胞」去比两组，细胞数上万，p 几乎都会 &lt; 0.05，这不代表临床上每例病人都变了。<strong>写进结论的请看患者级</strong>：每例样本先算该细胞类型的中位数（或占比），再 CTRL 6 个点 vs ACI 5 个点。</li>
+    <li><strong>星号：</strong><code>*</code> p&lt;0.05，<code>**</code> &lt;0.01，<code>***</code> &lt;0.001。09–11 患者级组间<strong>不做</strong>多重检验校正（BH）；细胞级做了 BH，仍只能当参考。</li>
+    <li><strong>热图颜色：</strong>蓝低 / 白中 / 红高。均值热图是「每个通路先跨细胞标准化再取平均」，用来<strong>比较不同通路、不同细胞类型</strong>；不要把颜色深浅理解成测到的蛋白量。组间 Δ 热图是 ACI 减去 CTRL，红 = ACI 更高。</li>
+    <li><strong>UMAP：</strong>近 = 转录组更像。不能当成时间轴，除非 08 里明确画了轨迹。</li>
+  </ul>
+
+  <div class="warn">
+    <strong>这批数据还不能回答的问题：</strong>
+    只有颅骨骨髓、没有配对外周血 / 脑实质；没有蛋白或空间转录组；11 例、年龄性别未放进模型；CellTypist 参考集不是颅骨骨髓，只能当线索；PROGENy / TF / CytoSig 都是<strong>从转录组推断的活性</strong>，不是 ELISA 或磷酸化检测。轨迹（08）目前还没有接到 09–11 的统计里。
+  </div>
+
+  <h2>按顺序打开报告</h2>
+  <p>括号里是给非生信读者的一句话。</p>
   <ol>
-    <li><a href="00_qc.html">00 QC</a></li>
-    <li><a href="01_clustering.html">01 Clustering</a></li>
-    <li><a href="02_marker_plot.html">02 Marker plots</a></li>
-    <li><a href="03_1_prediction.html">03.1 Prediction (h5ad export)</a></li>
-    <li><a href="03_2_celltypist.html">03.2 CellTypist</a></li>
-    <li><a href="04_annotation.html">04 Annotation</a></li>
-    <li><a href="05_1_hspc.html">05.1 HSPC</a></li>
-    <li><a href="05_2_b_plasma.html">05.2 B / Plasma</a></li>
-    <li><a href="05_3_tnk.html">05.3 T / NK</a></li>
-    <li><a href="05_4_myeloid.html">05.4 Mono/DC / pDC</a></li>
-    <li><a href="05_5_neutrophil.html">05.5 Pre-Neut / Neut</a></li>
-    <li><a href="05_6_erythrocyte.html">05.6 Ery</a></li>
-    <li><a href="06_final.html">06 Final object</a></li>
-    <li><a href="07_1_composition.html">07.1 Composition / miloR</a></li>
-    <li><a href="07_2_sccoda.html">07.2 scCODA / tascCODA</a></li>
-    <li><a href="08_neut_trajectory.html">08 Neutrophil trajectory</a></li>
-    <li><a href="09_progeny.html">09 PROGENy</a></li>
-    <li><a href="10_neut_decouple.html">10 Neutrophil TF activity</a></li>
-    <li><a href="11_cytosig.html">11 CytoSig</a></li>
+    <li><a href="00_qc.html">00 QC</a> — 去掉空液滴、双细胞、濒死细胞，后面所有数字都建立在这一步。</li>
+    <li><a href="01_clustering.html">01 Clustering</a> — 把相似细胞聚在一起，并用 Harmony 减弱「样本批次」而不是疾病信号。</li>
+    <li><a href="02_marker_plot.html">02 Marker plots</a> — 用经典标记基因在图上看各大类在哪。</li>
+    <li><a href="03_1_prediction.html">03.1 导出</a> — 只是把数据转成 CellTypist 能读的格式。</li>
+    <li><a href="03_2_celltypist.html">03.2 CellTypist</a> — 计算机给的参考标签，<strong>不是最终命名</strong>；骨髓中性粒常被误标成单核。</li>
+    <li><a href="04_annotation.html">04 大类注释</a> — 人工把 cluster 收成 HSPC / B / 中性粒等 level-1。</li>
+    <li><a href="05_1_hspc.html">05.1 HSPC</a>、<a href="05_2_b_plasma.html">05.2 B/浆细胞</a>、<a href="05_3_tnk.html">05.3 T/NK</a>、<a href="05_4_myeloid.html">05.4 单核/DC</a>、<a href="05_5_neutrophil.html">05.5 中性粒</a>、<a href="05_6_erythrocyte.html">05.6 红系</a> — 各大类内部再细分。中性粒这篇最重要。</li>
+    <li><a href="06_final.html">06 合并终对象</a> — 所有亚型拼回去，官方 UMAP 从这里开始用。</li>
+    <li><a href="07_1_composition.html">07.1 组成 / miloR</a> — 每例病人里各类细胞占多少；看中性粒是否扩增。</li>
+    <li><a href="07_2_sccoda.html">07.2 scCODA</a> — 专门给「组成数据」用的贝叶斯模型，主结论优先看这里的可信区间，而不是 07.1 的 Wilcoxon。</li>
+    <li><a href="08_neut_trajectory.html">08 中性粒轨迹</a> — GMP→早幼粒→Pre-Neut→成熟粒是否连成一条发育轴。</li>
+    <li><a href="09_progeny.html">09 PROGENy 通路</a> — JAK-STAT、NFkB、TNFa 等<strong>通路开关</strong>在中性粒谱系里怎么变。</li>
+    <li><a href="10_neut_decouple.html">10 转录因子</a> — 哪些 TF 随发育升降、两组是否不同。</li>
+    <li><a href="11_cytosig.html">11 CytoSig</a> — 细胞「看起来像刚被哪些细胞因子训过」（IFN、G-CSF 等），不是直接测到的细胞因子浓度。</li>
   </ol>
-  <p class="note">Source: <a href="https://github.com/jha14/stroke_bm">github.com/jha14/stroke_bm</a>. 05 order follows <code>plot_colors.R</code> (<code>annot_main_col</code>).</p>
+
+  <p class="note">源码：<a href="https://github.com/jha14/stroke_bm">github.com/jha14/stroke_bm</a>。请用本页 HTML，不要打开 <code>.qmd</code> 当论文读。05 顺序与 <code>plot_colors.R</code> 中细胞大类颜色一致。</p>
 </body>
 </html>

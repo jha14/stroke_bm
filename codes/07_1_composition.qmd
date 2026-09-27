@@ -22,6 +22,15 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇在故事里的位置：** 回答「急性脑梗后颅骨骨髓哪类细胞变多/变少」。这是中性粒扩增的第一张证据图。主结论请到 07.2 scCODA；这里的 Wilcoxon 和 miloR 是补充。
+
+**怎么读占比图：** 每个点最好想成「这一例病人里该类细胞占全部细胞的百分之几」。CTRL 6 个点、ACI 5 个点。某类 ACI 整体上移 = 那一类在病人骨髓里更「挤」。
+
+**miloR：** 不按我们起的名字，而按转录组邻居圈一块细胞再比丰度。和「按 annot 数个数」会略有出入，方向应大致同向。
+
+**注意：** 占比是相对数。中性粒升高，其他类的占比会被「挤下去」，不一定是那些细胞绝对减少。
+
 
 样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 `07_2_sccoda.ipynb` 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。`group` 以 **CTRL** 为对照。
 
@@ -71,6 +80,8 @@ print(table(cell_meta$annot_main, cell_meta$group))
 ```
 
 ### 1. Sample proportions
+
+每例一个占比。看中性粒 / Pre-Neut / HSPC（含 GMP）在 ACI 是否整体上移。点少（11 个），重叠多不代表没趋势，去 07.2 看模型。
 
 ```{r message=FALSE, warning=FALSE}
 make_prop <- function(meta, cell_col) {
@@ -165,7 +176,7 @@ ggsave(
 
 ### 2. Wilcoxon (sensitivity)
 
-每类型独立检验，**不考虑成分约束**，只作对照。主结果看 scCODA / tascCODA。
+每类细胞单独做 6 vs 5 的 Wilcoxon。样本少，不显著不等于没生物学差异。每类型独立检验，**不考虑成分约束**，只作对照。主结果看 scCODA / tascCODA。
 
 ```{r message=FALSE, warning=FALSE}
 wilcox_props <- function(prop_df) {
@@ -204,6 +215,8 @@ wilcox_sub
 `data/rdata/composition/cell_meta.csv` 给 `07_2_sccoda.ipynb`。该 notebook 用 pertpy：`annot_main` 做 scCODA，`annot_main` + `annot_sub` 树做 tascCODA。
 
 ### 4. miloR
+
+邻域丰度：正 logFC（红）= ACI 更富集。SpatialFDR < 0.1 常当作「这片邻居可信」。应和占比图方向大致一致。
 
 在 Harmony 邻域上检验 ACI vs CTRL。不依赖离散 cluster；邻域再用 `annot_main` / `annot_sub` 注释。
 

@@ -22,6 +22,11 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇：** 造血干祖（HSC、MEP、GMP、MDP）。GMP 后面会进中性粒轨迹。
+
+**给实验同事：** 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 **06 的 annot 点图** 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。
+
 
 Level-1 `HSPC` only (clusters 21/24/31). Do not pull Pre-B / Pre-Neut into this object. After inspecting, mixed clusters can be invert-subset in round 2; GMP barcodes that belong with neutrophils can be saved later.
 

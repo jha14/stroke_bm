@@ -2211,6 +2211,9 @@ vertical-align: -.125em;
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <h1 class="title">Subtype: Erythrocyte</h1>
+<!-- injected-reader-guide -->
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p><strong>这篇：</strong> 红系早/晚。</p><p><strong>给实验同事：</strong> 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 <strong>06 的 annot 点图</strong> 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。</p><p>Level-1 <code>Ery</code>（含偏成熟的 cluster 36）。HVG 会被珠蛋白主导，属预期。同时看 MK（PF4/PPBP）和其它谱系污染。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+
 </div>
 
 

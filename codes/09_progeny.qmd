@@ -22,6 +22,15 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇在故事里的位置：** 中性粒多了以后，**通路开关**有没有变。PROGENy 用一小组靶基因推断 JAK-STAT、NFkB、TNFa、MAPK 等通路是开还是关（不是测磷酸化蛋白）。去掉 Androgen / Estrogen，因为这两条对骨髓故事干扰大，而且会进同一个多元模型。
+
+**怎么读分数：** 每个细胞一个通路得到一个 t 值。正 = 相对更活跃，负 = 更不活跃。直方图和检验用这个原始值。
+
+**怎么读热图：** 「大类 × 通路」均值热图先把每个通路在所有细胞上 z-score，再取该类平均，为的是通路之间能横着比。组间红蓝热图是 **ACI 中位数 − CTRL 中位数**。
+
+**请看哪张：** 中性粒谱系（GMP→成熟粒）的患者级组间，以及阶段热图。细胞级星号几乎铺满，不要当病人水平的结论。
+
 
 全细胞 PROGENy（decoupleR **mlm**），再对 `08` 中性粒谱系（GMP → 成熟 Neut）做阶段和分组。跑 mlm 前从网络里去掉 **Androgen / Estrogen**。mlm 只跑一次。统计、箱线、直方图用 **mlm 原始 t 值**；类群均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/pw_sc.html)先对每个通路跨细胞 z-score（`ScaleData`）再取均值。Wilcoxon Δ 热图仍用原始分数。转录因子见 `10_neut_decouple.qmd`。细胞级 Wilcoxon 用 BH；样本级用原始 p。`group` 以 **CTRL** 为对照。
 
@@ -122,7 +131,7 @@ print(pw)
 
 ### 2. 大类之间
 
-每个通路 Kruskal–Wallis（`annot_main`，原始 score）。热图：每个通路跨细胞 z-score 后再按大类取均值。
+先看「哪类细胞哪条通路高」，不是组间。Kruskal 只说明大类之间有差别（几乎一定有）。每个通路 Kruskal–Wallis（`annot_main`，原始 score）。热图：每个通路跨细胞 z-score 后再按大类取均值。
 
 ```{r message=FALSE, warning=FALSE}
 kw_main <- kruskal_by_type(dat, pw, "annot_main")
@@ -161,7 +170,7 @@ p_box
 
 ### 3. CTRL vs ACI（每个大类）
 
-细胞级 Wilcoxon + BH；样本中位数（该大类内每样本至少 `r min_cells_sample` 个细胞）用原始 p。
+患者级星号才是组间。直方图：同一亚型里蓝/红分布是否错开；错开但患者级不显著 = 只是细胞很多。细胞级 Wilcoxon + BH；样本中位数用原始 p。
 
 ```{r message=FALSE, warning=FALSE}
 cell_main <- cell_group_tests(dat, pw, strata_col = "annot_main") |>
@@ -289,7 +298,7 @@ p_hist_med_main
 
 ### 4. 中性粒谱系：发育阶段
 
-复用全细胞 mlm，取 GMP + Pre-Neut + Neut。阶段秩 Spearman + Kruskal 用原始 score。热图在谱系细胞内 z-score 再取均值。
+从左 GMP 到右成熟粒。某通路沿阶段变红/变蓝 = 发育程序，不一定是脑梗造成的。脑梗效应看下一节组间。复用全细胞 mlm。阶段秩 Spearman + Kruskal 用原始 score。热图在谱系细胞内 z-score 再取均值。
 
 ```{r message=FALSE, warning=FALSE}
 dat_neut <- dat |>

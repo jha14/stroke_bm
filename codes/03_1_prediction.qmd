@@ -22,6 +22,9 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇在故事里的位置：** 纯格式转换，把 Seurat 对象写成 h5ad，供下一篇 CellTypist 用。没有生物学结论。
+
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, SingleCellExperiment, zellkonverter)

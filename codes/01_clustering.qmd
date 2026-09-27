@@ -22,6 +22,13 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇在故事里的位置：** 把转录组相近的细胞聚成簇，后面 04/05 才能命名。
+
+**几个词：** *HVG* = 样本间变化大的基因，用来画地图；*PCA* = 降维压缩；*Harmony* = 减弱「张三李四测序批次」差异，尽量留下生物学差异；*Leiden cluster* = 邻域图上的小区。UMAP 只是把高维邻居摊平到 2D，**近 ≠ 发育先后**。
+
+**请看什么：** 按 `sample` 上色的 UMAP 若完全各占一块，说明批次没混开；按 cluster 上色应成团。分辨率越大，簇越碎。
+
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot)

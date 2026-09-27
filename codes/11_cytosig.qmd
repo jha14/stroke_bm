@@ -22,6 +22,15 @@ ul, ol {
 }
 </style>
 ```
+<!-- reader-guide -->
+**这篇在故事里的位置：** 细胞的转录组「像刚被哪种细胞因子训练过」。这是**推断的细胞因子响应**，不是骨髓上清 ELISA。先看所有大类，再聚焦中性粒谱系（含 GMP 前体）。
+
+**怎么读热图：** 与 09 相同：均值热图用跨细胞 z-score；组间热图用 ACI−CTRL。
+
+**怎么读 lollipop：** 每个点一种细胞因子，高度 = 患者级 ACI 减 CTRL。红 = ACI 显著更高，蓝 = 显著更低，灰 = 不显著。从左到右按差值从高到低。**请把这张当 11 的主图**，亚型热图用来看信号是停在 Pre-Neut 还是成熟粒。
+
+**nrand=0：** 没有做 CytoSig 自带的随机置换 p；我们用自己的 Wilcoxon 比较两组。
+
 
 全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 `08` 一致）做亚型分析。conda **cytosig**。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，**样本级原始 p**。Lollipop 样式同 arhgap35 `analysis.R` 的 `ggdotchart`。`group` 以 **CTRL** 为对照。`nrand=0`。
 
@@ -260,7 +269,7 @@ p_hm_sub_g
 
 ### 5. 中性粒谱系总体：lollipop
 
-谱系细胞合计，样本级原始 p（主图），细胞级 BH 作对照。按 ACI−CTRL 从高到低。
+**主图。** 红点 = ACI 患者级显著更高的细胞因子响应。先看 IFN / 集落刺激因子是否在红侧，再对照亚型热图定位阶段。谱系细胞合计，样本级原始 p，细胞级 BH 作对照。按 ACI−CTRL 从高到低。
 
 ```{r message=FALSE, warning=FALSE}
 ck_cell_lineage <- add_fdr(cell_group_tests(dat_neut, ck))
@@ -293,6 +302,8 @@ p_lolli_c
 ```
 
 ### 6. 中性粒亚型：CTRL vs ACI
+
+看信号是停在前体还是成熟粒。患者级为主。
 
 ```{r message=FALSE, warning=FALSE}
 ck_cell_sub <- add_fdr(cell_group_tests(dat_neut, ck, strata_col = "annot_sub")) |>
