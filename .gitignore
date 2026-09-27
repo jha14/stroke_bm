@@ -14,3 +14,4 @@ celltypist/
 !docs/*.html
 *_files/
 .DS_Store
+*.rmarkdown

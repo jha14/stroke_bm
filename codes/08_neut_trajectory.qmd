@@ -36,6 +36,15 @@ knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_
 setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
 source("codes/functions.R")
 source("codes/plot_colors.R")
+# CytoTRACE2 / destiny 会挂上 plyr，Rfast 会盖掉 Order。
+summarise <- dplyr::summarise
+mutate <- dplyr::mutate
+filter <- dplyr::filter
+rename <- dplyr::rename
+arrange <- dplyr::arrange
+group_by <- dplyr::group_by
+ungroup <- dplyr::ungroup
+group_modify <- dplyr::group_modify
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -94,10 +103,7 @@ plot_embed_short <- function(
   if (!is.null(cols)) dim_args$cols <- cols
   p <- do.call(Seurat::DimPlot, dim_args) +
     theme_umap_short() +
-    ggplot2::xlab(xlab) +
-    ggplot2::ylab(ylab) +
-    ggplot2::scale_x_continuous(breaks = NULL) +
-    ggplot2::scale_y_continuous(breaks = NULL) +
+    ggplot2::labs(x = xlab, y = ylab) +
     ggplot2::guides(x = axis, y = axis)
   if (isFALSE(legend)) {
     p <- p + ggplot2::guides(color = "none")
@@ -319,12 +325,39 @@ ggsave(
 
 细胞水平 Wilcoxon 会被组成分牵着走（ACI 成熟中性粒更多）。样本水平是每个样本的中位数再比组；亚型内比较更干净。样本至少 `min_cells_sample` 个细胞才进样本水平。
 
+跑完写入 `data/rdata/trajectory/cytotrace_neut.qs2`。下次细胞数和 barcode 与当前对象一致就跳过 `cytotrace2()`。
+
 ```{r message=FALSE, warning=FALSE}
-counts_mat <- LayerData(seurat_object, assay = "RNA", layer = "counts")
-seurat_object[["RNA"]]$counts <- as(counts_mat, "dgCMatrix")
-seurat_object <- cytotrace2(
-  seurat_object, species = "human", is_seurat = TRUE, ncores = 10
-)
+cyto_qs2 <- file.path(obj_path, "cytotrace_neut.qs2")
+cyto_cache <- NULL
+if (file.exists(cyto_qs2)) {
+  cyto_cache <- qs_read(cyto_qs2, nthreads = 10)
+}
+same_n <- !is.null(cyto_cache) && nrow(cyto_cache) == ncol(seurat_object)
+same_cells <- same_n &&
+  identical(sort(rownames(cyto_cache)), sort(colnames(seurat_object)))
+if (same_cells) {
+  message(
+    "Reuse CytoTRACE2 from qs2 (", nrow(cyto_cache), " cells). Skip cytotrace2()."
+  )
+  cyto_cache <- cyto_cache[colnames(seurat_object), , drop = FALSE]
+  seurat_object <- AddMetaData(seurat_object, cyto_cache)
+} else {
+  if (!is.null(cyto_cache)) {
+    message(
+      "CytoTRACE2 qs2 n=", nrow(cyto_cache),
+      " vs current n=", ncol(seurat_object), "; re-run."
+    )
+  }
+  counts_mat <- LayerData(seurat_object, assay = "RNA", layer = "counts")
+  seurat_object[["RNA"]]$counts <- as(counts_mat, "dgCMatrix")
+  seurat_object <- cytotrace2(
+    seurat_object, species = "human", is_seurat = TRUE, ncores = 10
+  )
+  cyto_cols <- grep("^CytoTRACE2", colnames(seurat_object[[]]), value = TRUE)
+  cyto_out <- FetchData(seurat_object, vars = cyto_cols)
+  qs_save(cyto_out, cyto_qs2, nthreads = 10)
+}
 table(seurat_object$CytoTRACE2_Potency)
 summary(seurat_object$CytoTRACE2_Score)
 ```
@@ -375,7 +408,7 @@ write_csv(cyto_meta, file.path(obj_path, "cytotrace_cell.csv"))
 
 ```{r message=FALSE, warning=FALSE}
 ggplot(cyto_meta, aes(CytoTRACE2_Score, annot_sub, fill = annot_sub)) +
-  geom_boxplot(outliers = FALSE, alpha = 0.7, width = 0.65) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, width = 0.65) +
   geom_jitter(shape = 16, alpha = 0.05, size = 0.15, height = 0.2) +
   scale_fill_manual(values = traj_col) +
   scale_y_discrete(limits = rev(traj_levels)) +
@@ -398,18 +431,18 @@ cyto_overall_cell <- wilcox_ctrl_aci(cyto_meta$CytoTRACE2_Score, cyto_meta$group
 cyto_sample_all <- cyto_meta |>
   group_by(sample, group) |>
   summarise(
-    n = n(),
+    n_cell = dplyr::n(),
     CytoTRACE2_Score = median(CytoTRACE2_Score),
     .groups = "drop"
   ) |>
-  filter(n >= min_cells_sample)
+  filter(.data$n_cell >= min_cells_sample)
 cyto_overall_sample <- wilcox_ctrl_aci(
   cyto_sample_all$CytoTRACE2_Score, cyto_sample_all$group
 ) |>
   mutate(level = "sample", stratum = "all")
 
 p_all_cell <- ggplot(cyto_meta, aes(group, CytoTRACE2_Score, fill = group)) +
-  geom_boxplot(outliers = FALSE, alpha = 0.7, width = 0.65) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, width = 0.65) +
   geom_jitter(shape = 16, alpha = 0.04, size = 0.15, width = 0.2) +
   scale_fill_manual(values = group_col) +
   stat_compare_means(method = "wilcox.test", label = "p.format") +
@@ -421,7 +454,7 @@ p_all_cell <- ggplot(cyto_meta, aes(group, CytoTRACE2_Score, fill = group)) +
 p_all_sample <- ggplot(
   cyto_sample_all, aes(group, CytoTRACE2_Score, fill = group)
 ) +
-  geom_boxplot(outliers = FALSE, alpha = 0.7, width = 0.65) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, width = 0.65) +
   geom_jitter(width = 0.12, size = 2, alpha = 0.9) +
   scale_fill_manual(values = group_col) +
   stat_compare_means(method = "wilcox.test", label = "p.format") +
@@ -446,11 +479,11 @@ cyto_sub_cell <- cyto_meta |>
 cyto_sample_sub <- cyto_meta |>
   group_by(sample, group, annot_sub) |>
   summarise(
-    n = n(),
+    n_cell = dplyr::n(),
     CytoTRACE2_Score = median(CytoTRACE2_Score),
     .groups = "drop"
   ) |>
-  filter(n >= min_cells_sample)
+  filter(.data$n_cell >= min_cells_sample)
 
 cyto_sub_sample <- cyto_sample_sub |>
   group_by(annot_sub) |>
@@ -467,11 +500,16 @@ cyto_stats
 ```
 
 ```{r message=FALSE, warning=FALSE}
+p_lab_cell <- cyto_sub_cell |>
+  mutate(lab = ifelse(is.na(p), "", sprintf("p=%.3g", p)))
 ggplot(cyto_meta, aes(group, CytoTRACE2_Score, fill = group)) +
-  geom_boxplot(outliers = FALSE, alpha = 0.7, width = 0.65) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, width = 0.65) +
   geom_jitter(shape = 16, alpha = 0.06, size = 0.15, width = 0.18) +
+  geom_text(
+    data = p_lab_cell, aes(x = 1.5, y = Inf, label = lab),
+    vjust = 1.4, size = 3, inherit.aes = FALSE
+  ) +
   scale_fill_manual(values = group_col) +
-  stat_compare_means(method = "wilcox.test", label = "p.signif") +
   facet_wrap(~annot_sub, nrow = 2, scales = "free_y") +
   ylab("CytoTRACE2 score") +
   ggtitle("Cell-level, by subtype") +
@@ -484,11 +522,16 @@ ggsave(
 ```
 
 ```{r message=FALSE, warning=FALSE}
+p_lab_sample <- cyto_sub_sample |>
+  mutate(lab = ifelse(is.na(p), "", sprintf("p=%.3g", p)))
 ggplot(cyto_sample_sub, aes(group, CytoTRACE2_Score, fill = group)) +
-  geom_boxplot(outliers = FALSE, alpha = 0.7, width = 0.65) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, width = 0.65) +
   geom_jitter(width = 0.12, size = 1.8, alpha = 0.9) +
+  geom_text(
+    data = p_lab_sample, aes(x = 1.5, y = Inf, label = lab),
+    vjust = 1.4, size = 3, inherit.aes = FALSE
+  ) +
   scale_fill_manual(values = group_col) +
-  stat_compare_means(method = "wilcox.test", label = "p.signif") +
   facet_wrap(~annot_sub, nrow = 2, scales = "free_y") +
   ylab("Median CytoTRACE2 / sample") +
   ggtitle("Sample-level, by subtype") +
@@ -609,18 +652,16 @@ for (ln in pt_cols) {
   seurat_object[[paste0("sling_", ln)]] <- sling$pseudotime[[ln]]
 }
 
-curve_xy <- {
-  cn <- colnames(sling$curves)
-  xcol <- cn[cn %in% c("UMAP_1", "umap_1")][1]
-  ycol <- cn[cn %in% c("UMAP_2", "umap_2")][1]
-  sling$curves |>
-    rename(x = all_of(xcol), y = all_of(ycol))
-}
+curve_xy <- sling$curves
+xy <- intersect(colnames(curve_xy), c("umap_1", "UMAP_1", "umap_2", "UMAP_2"))
+stopifnot(length(xy) >= 2)
+curve_xy <- curve_xy |>
+  dplyr::rename(x = dplyr::all_of(xy[1]), y = dplyr::all_of(xy[2]))
 lab_df <- curve_xy |>
-  group_by(Lineage) |>
-  filter(Order == max(Order)) |>
-  ungroup() |>
-  mutate(lab = paste0("L", Lineage))
+  dplyr::group_by(Lineage) |>
+  dplyr::slice_max(order_by = .data$Order, n = 1, with_ties = FALSE) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(lab = paste0("L", Lineage))
 
 plot_df <- as.data.frame(sling$dimred) |>
   mutate(annot_sub = sling$clustering)
@@ -630,7 +671,7 @@ y_umap <- colnames(plot_df)[2]
 ggplot(plot_df, aes(.data[[x_umap]], .data[[y_umap]])) +
   geom_point(aes(color = annot_sub), shape = 19, size = 0.1, alpha = 0.3) +
   geom_path(
-    data = curve_xy |> arrange(Lineage, Order),
+    data = curve_xy |> dplyr::arrange(.data$Lineage, .data$Order),
     aes(x = x, y = y, group = Lineage),
     arrow = arrow(type = "closed", length = unit(0.4, "cm")),
     linewidth = 1.2
