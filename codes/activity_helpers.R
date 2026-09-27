@@ -344,3 +344,90 @@ plot_score_hist <- function(long, subtype_col, bins = 40, title = NULL, rug = NU
   if (!is.null(title)) p <- p + ggtitle(title)
   p
 }
+
+pick_sling_pt <- function(meta) {
+  ln <- grep("^sling_Lineage", colnames(meta), value = TRUE)
+  if (length(ln) == 0) {
+    stop("No sling_Lineage* column. Re-run 08 and save seurat_object_neut_traj.qs2.")
+  }
+  n_ok <- vapply(ln, function(x) sum(is.finite(meta[[x]])), integer(1))
+  ln[which.max(n_ok)]
+}
+
+scale01 <- function(x) {
+  x <- as.numeric(x)
+  r <- range(x, na.rm = TRUE)
+  if (!all(is.finite(r)) || diff(r) == 0) {
+    return(rep(0, length(x)))
+  }
+  (x - r[1]) / diff(r)
+}
+
+plot_pt_density <- function(dat, pt_col, title = NULL) {
+  dat$group <- factor(as.character(dat$group), levels = c("CTRL", "ACI"))
+  p <- ggplot(dat, aes(x = .data[[pt_col]], fill = .data$group, color = .data$group)) +
+    geom_density(alpha = 0.35, linewidth = 0.6) +
+    scale_fill_manual(values = group_col) +
+    scale_color_manual(values = group_col) +
+    theme_classic() +
+    xlab("Pseudotime (0 = early)") +
+    ylab("Density")
+  if (!is.null(title)) p <- p + ggtitle(title)
+  p
+}
+
+plot_pt_smooth <- function(dat, pt_col, features, ncol = 4, ylab = "Score",
+                           n_sub = 4000) {
+  dat$group <- factor(as.character(dat$group), levels = c("CTRL", "ACI"))
+  if (nrow(dat) > n_sub) {
+    set.seed(1)
+    dat <- dat[sample.int(nrow(dat), n_sub), , drop = FALSE]
+  }
+  long <- dat |>
+    dplyr::select(
+      sample, group, dplyr::all_of(pt_col), dplyr::all_of(features)
+    ) |>
+    tidyr::pivot_longer(dplyr::all_of(features), names_to = "feature", values_to = "score")
+  long$feature <- factor(long$feature, levels = features)
+  ggplot(long, aes(x = .data[[pt_col]], y = .data$score, color = .data$group, fill = .data$group)) +
+    geom_smooth(method = "loess", span = 0.8, se = FALSE, linewidth = 0.9) +
+    scale_color_manual(values = group_col) +
+    scale_fill_manual(values = group_col) +
+    facet_wrap(~feature, scales = "free_y", ncol = ncol) +
+    theme_classic() +
+    theme(strip.text = element_text(size = 9), legend.position = "top") +
+    xlab("Pseudotime (0–1)") +
+    ylab(ylab)
+}
+
+sample_pt_bin_medians <- function(dat, pt_col, features, n_bins = 6) {
+  dat <- dat[is.finite(dat[[pt_col]]), , drop = FALSE]
+  dat$pt_bin <- cut(
+    dat[[pt_col]],
+    breaks = seq(0, 1, length.out = n_bins + 1),
+    include.lowest = TRUE,
+    labels = paste0("b", seq_len(n_bins))
+  )
+  sample_medians(dat, features, extra_group = "pt_bin")
+}
+
+pt_assoc <- function(dat, pt_col, features) {
+  x <- dat[[pt_col]]
+  purrr::map_dfr(features, function(ft) {
+    y <- dat[[ft]]
+    ok <- is.finite(x) & is.finite(y)
+    sp <- if (sum(ok) >= 5) {
+      suppressWarnings(cor.test(x[ok], y[ok], method = "spearman", exact = FALSE))
+    } else {
+      list(estimate = NA_real_, p.value = NA_real_)
+    }
+    tibble(
+      feature = ft,
+      n = sum(ok),
+      rho = unname(sp$estimate),
+      p_spearman = sp$p.value
+    )
+  }) |>
+    dplyr::mutate(padj = p.adjust(.data$p_spearman, method = "BH")) |>
+    dplyr::arrange(dplyr::desc(abs(.data$rho)))
+}

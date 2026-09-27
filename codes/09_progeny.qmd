@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-通路活性（JAK-STAT、NFκB、TNFα 等），从靶基因推断，不是磷酸化检测。雄/雌激素通路已去掉。正分更活跃。Δ 热图是 ACI 中位数减去 CTRL。看中性粒谱系、每个样本一个点；细胞级星号几乎铺满，不要当病人水平的结论。
+通路活性（JAK-STAT、NFκB、TNFα 等），从靶基因推断，不是磷酸化检测。雄/雌激素通路已去掉。正分更活跃。Δ 热图是 ACI 中位数减去 CTRL。这里按亚型阶段比较；和 08 拟时间对齐见 12。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(

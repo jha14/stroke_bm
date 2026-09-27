@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。09–11 仍按亚型阶段统计，还没用这条拟时间。
+看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。把拟时间接到通路 / TF / CytoSig 上见 12；HSC 自己的轴见 13。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(

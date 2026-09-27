@@ -1,0 +1,286 @@
+---
+title: "Neutrophil trajectory × pathway / TF / CytoSig"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+<!-- reader-guide -->
+把 08 的 Slingshot 拟时间接到 09–11 已经算好的分数上。问两件事：ACI 是不是在轴上更靠前或更靠后（组成/进度）；通路和细胞因子是顺着发育变，还是两组在同一位置就不同。细胞级平滑曲线会很好看，组间结论仍看每个样本一个点。CTRL 5′ / ACI 3′ 仍然叠在分组上。这里不用 tradeSeq。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(Seurat, tidyverse, qs2, cowplot, ggpubr)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/plot_colors.R")
+source("codes/activity_helpers.R")
+summarise <- dplyr::summarise
+mutate <- dplyr::mutate
+filter <- dplyr::filter
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/traj_activity"
+obj_path <- "data/rdata/activity"
+traj_path <- "data/rdata/trajectory"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+
+n_tf_top <- 20
+n_ck_top <- 12
+n_bins <- 6
+traj_levels <- c(
+  "GMP",
+  "Promyelocyte", "MMP8 Pre-Neut", "MMP9 Pre-Neut",
+  "S100A12 Neut", "SLC8A1 Neut", "ISG15 Neut"
+)
+```
+
+### 1. 读 08 拟时间和 09–11 缓存
+<!-- step-note -->
+不重跑 mlm / ulm / CytoSig。轨迹对象来自 08；分数来自 `data/rdata/activity/`。
+
+```{r message=FALSE, warning=FALSE}
+traj <- qs_read(file.path(traj_path, "seurat_object_neut_traj.qs2"), nthreads = 10)
+pt_raw <- pick_sling_pt(traj[[]])
+message(
+  "Using ", pt_raw, " (cells with PT: ",
+  sum(is.finite(traj[[]][[pt_raw]])), ")"
+)
+traj_meta <- FetchData(
+  traj,
+  vars = intersect(
+    c("sample", "group", "annot_sub", pt_raw, "CytoTRACE2_Score"),
+    colnames(traj[[]])
+  )
+) |>
+  rownames_to_column("barcode")
+traj_meta <- traj_meta[is.finite(as.numeric(traj_meta[[pt_raw]])), , drop = FALSE]
+traj_meta$group <- factor(as.character(traj_meta$group), levels = c("CTRL", "ACI"))
+traj_meta$annot_sub <- factor(as.character(traj_meta$annot_sub), levels = traj_levels)
+traj_meta$pt <- scale01(as.numeric(traj_meta[[pt_raw]]))
+
+progeny_wide <- qs_read(file.path(obj_path, "progeny_all.qs2"), nthreads = 10)
+tf_wide <- qs_read(file.path(obj_path, "collectri_neut.qs2"), nthreads = 10)
+cs_wide <- qs_read(file.path(obj_path, "cytosig_all.qs2"), nthreads = 10)
+pw <- features_from_wide(progeny_wide)
+tfs <- features_from_wide(tf_wide)
+ck <- features_from_wide(cs_wide)
+
+dat_pw <- inner_join(traj_meta, progeny_wide, by = "barcode")
+dat_tf <- inner_join(traj_meta, tf_wide, by = "barcode")
+dat_cs <- inner_join(traj_meta, cs_wide, by = "barcode")
+stopifnot(nrow(dat_pw) > 100, nrow(dat_tf) > 100, nrow(dat_cs) > 100)
+print(table(traj_meta$annot_sub, traj_meta$group))
+print(c(progeny = nrow(dat_pw), tf = nrow(dat_tf), cytosig = nrow(dat_cs)))
+```
+
+### 2. 拟时间进度（有没有提前或滞后）
+<!-- step-note -->
+密度图看细胞在轴上堆在哪。箱线是每例的拟时间中位数，这才是组间。ACI 更靠左 = 更多早阶段细胞（或整条轴前移），不一定是同一个细胞变幼稚。
+
+```{r message=FALSE, warning=FALSE}
+p_den <- plot_pt_density(traj_meta, "pt", title = "Slingshot PT")
+ggsave(file.path(res_path, "01_pt_density.pdf"), p_den, width = 7, height = 4, dpi = 600)
+p_den
+
+cyto_ok <- traj_meta[is.finite(as.numeric(traj_meta$CytoTRACE2_Score)), , drop = FALSE]
+p_cyto <- plot_pt_density(
+  cyto_ok,
+  "CytoTRACE2_Score",
+  title = "CytoTRACE2 (high = earlier)"
+)
+ggsave(file.path(res_path, "01_cytotrace_density.pdf"), p_cyto, width = 7, height = 4, dpi = 600)
+p_cyto
+```
+
+```{r message=FALSE, warning=FALSE}
+p_stage <- ggplot(traj_meta, aes(x = annot_sub, y = pt, fill = annot_sub)) +
+  geom_boxplot(outlier.size = 0.15, width = 0.7) +
+  scale_fill_manual(values = annot_sub_col[traj_levels]) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  xlab(NULL) +
+  ylab("Pseudotime 0–1")
+ggsave(file.path(res_path, "01_pt_by_subtype.pdf"), p_stage, width = 8, height = 5, dpi = 600)
+p_stage
+```
+
+```{r message=FALSE, warning=FALSE}
+sample_pt <- traj_meta |>
+  dplyr::group_by(sample, group) |>
+  dplyr::summarise(
+    n_cell = dplyr::n(),
+    pt_median = median(pt, na.rm = TRUE),
+    cyto_median = median(CytoTRACE2_Score, na.rm = TRUE),
+    frac_early = mean(pt <= 1 / 3, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  dplyr::filter(n_cell >= min_cells_sample)
+write_csv(sample_pt, file.path(res_path, "01_sample_pseudotime.csv"))
+
+pt_test <- dplyr::bind_rows(
+  wilcox_ctrl_aci(sample_pt$pt_median, sample_pt$group) |>
+    dplyr::mutate(feature = "pt_median"),
+  wilcox_ctrl_aci(sample_pt$cyto_median, sample_pt$group) |>
+    dplyr::mutate(feature = "cyto_median"),
+  wilcox_ctrl_aci(sample_pt$frac_early, sample_pt$group) |>
+    dplyr::mutate(feature = "frac_early")
+) |>
+  add_stars()
+write_csv(pt_test, file.path(res_path, "01_sample_pseudotime_wilcox.csv"))
+print(pt_test)
+
+p_box_pt <- ggplot(sample_pt, aes(x = group, y = pt_median, fill = group)) +
+  geom_boxplot(width = 0.55, outlier.shape = NA) +
+  geom_jitter(width = 0.12, size = 2.2, alpha = 0.9) +
+  scale_fill_manual(values = group_col) +
+  theme_classic() +
+  theme(legend.position = "none") +
+  xlab(NULL) +
+  ylab("Sample median PT")
+ggsave(file.path(res_path, "01_sample_pt_box.pdf"), p_box_pt, width = 4.5, height = 5, dpi = 600)
+p_box_pt
+```
+
+### 3. PROGENy 沿拟时间
+<!-- step-note -->
+平滑曲线是细胞级 loess（随机抽 4000 个细胞看形状：平行平移 vs 交叉）。组间结论看下面按拟时间分段的样本中位数。
+
+```{r message=FALSE, warning=FALSE}
+pw_rho <- pt_assoc(dat_pw, "pt", pw)
+write_csv(pw_rho, file.path(res_path, "02_progeny_pt_spearman.csv"))
+print(pw_rho)
+
+p_pw <- plot_pt_smooth(dat_pw, "pt", pw, ncol = 4, ylab = "PROGENy mlm")
+ggsave(file.path(res_path, "02_progeny_pt_smooth.pdf"), p_pw, width = 12, height = 8, dpi = 600)
+p_pw
+```
+
+```{r message=FALSE, warning=FALSE}
+med_pw <- sample_pt_bin_medians(dat_pw, "pt", pw, n_bins = n_bins)
+bin_pw <- sample_group_tests(med_pw, pw, strata_col = "pt_bin") |>
+  add_stars()
+write_csv(bin_pw, file.path(res_path, "02_progeny_pt_bin_sample.csv"))
+
+p_pw_d <- ggplot(bin_pw, aes(x = stratum, y = feature, fill = delta_aci_minus_ctrl)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 3) +
+  scale_fill_activity(bin_pw$delta_aci_minus_ctrl) +
+  theme_classic() +
+  xlab("PT bin (b1 early → b6 late)") +
+  ylab(NULL) +
+  ggtitle("PROGENy sample median: ACI − CTRL")
+ggsave(file.path(res_path, "02_progeny_pt_bin_delta.pdf"), p_pw_d, width = 8, height = 6, dpi = 600)
+p_pw_d
+print(dplyr::filter(bin_pw, .data$p < 0.05))
+```
+
+### 4. 转录因子沿拟时间
+<!-- step-note -->
+仍只用和发育相关的 top TF（和 10 同一套逻辑），避免一千个 TF 一起画。
+
+```{r message=FALSE, warning=FALSE}
+tf_csv <- "results/neut_tf/01_tf_stage.csv"
+if (file.exists(tf_csv)) {
+  tf_stage <- read_csv(tf_csv, show_col_types = FALSE)
+} else {
+  tf_stage <- stage_assoc(dat_tf, tfs, "annot_sub")
+}
+tf_keep <- tf_stage |>
+  dplyr::filter(.data$padj_kruskal < 0.05) |>
+  dplyr::slice_max(order_by = abs(.data$rho), n = n_tf_top, with_ties = FALSE)
+if (nrow(tf_keep) < n_tf_top) {
+  tf_keep <- tf_stage |>
+    dplyr::slice_max(order_by = abs(.data$rho), n = n_tf_top, with_ties = FALSE)
+}
+tf_top <- intersect(tf_keep$feature, tfs)
+print(tf_top)
+
+tf_rho <- pt_assoc(dat_tf, "pt", tf_top)
+write_csv(tf_rho, file.path(res_path, "03_tf_pt_spearman.csv"))
+
+p_tf <- plot_pt_smooth(dat_tf, "pt", tf_top, ncol = 5, ylab = "CollecTRI ulm")
+ggsave(file.path(res_path, "03_tf_pt_smooth.pdf"), p_tf, width = 14, height = 10, dpi = 600)
+p_tf
+```
+
+```{r message=FALSE, warning=FALSE}
+med_tf <- sample_pt_bin_medians(dat_tf, "pt", tf_top, n_bins = n_bins)
+bin_tf <- sample_group_tests(med_tf, tf_top, strata_col = "pt_bin") |>
+  add_stars()
+write_csv(bin_tf, file.path(res_path, "03_tf_pt_bin_sample.csv"))
+p_tf_d <- ggplot(bin_tf, aes(x = stratum, y = feature, fill = delta_aci_minus_ctrl)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 2.5) +
+  scale_fill_activity(bin_tf$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.y = element_text(size = 8)) +
+  xlab("PT bin (b1 early → b6 late)") +
+  ylab(NULL) +
+  ggtitle("TF sample median: ACI − CTRL")
+ggsave(file.path(res_path, "03_tf_pt_bin_delta.pdf"), p_tf_d, width = 8, height = 7, dpi = 600)
+p_tf_d
+print(dplyr::filter(bin_tf, .data$p < 0.05))
+```
+
+### 5. CytoSig 沿拟时间
+<!-- step-note -->
+先按和拟时间的相关选出变化最大的细胞因子，再看两组曲线。Lollipop 仍以 11 的样本级总差为准；这里看差发生在轴的哪一段。
+
+```{r message=FALSE, warning=FALSE}
+ck_rho <- pt_assoc(dat_cs, "pt", ck)
+write_csv(ck_rho, file.path(res_path, "04_cytosig_pt_spearman.csv"))
+ck_top <- ck_rho |>
+  dplyr::slice_max(order_by = abs(.data$rho), n = n_ck_top, with_ties = FALSE) |>
+  dplyr::pull(feature)
+print(ck_rho |> dplyr::filter(.data$feature %in% ck_top))
+
+p_cs <- plot_pt_smooth(dat_cs, "pt", ck_top, ncol = 4, ylab = "CytoSig z")
+ggsave(file.path(res_path, "04_cytosig_pt_smooth.pdf"), p_cs, width = 12, height = 8, dpi = 600)
+p_cs
+```
+
+```{r message=FALSE, warning=FALSE}
+med_cs <- sample_pt_bin_medians(dat_cs, "pt", ck_top, n_bins = n_bins)
+bin_cs <- sample_group_tests(med_cs, ck_top, strata_col = "pt_bin") |>
+  add_stars()
+write_csv(bin_cs, file.path(res_path, "04_cytosig_pt_bin_sample.csv"))
+p_cs_d <- ggplot(bin_cs, aes(x = stratum, y = feature, fill = delta_aci_minus_ctrl)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 3) +
+  scale_fill_activity(bin_cs$delta_aci_minus_ctrl) +
+  theme_classic() +
+  xlab("PT bin (b1 early → b6 late)") +
+  ylab(NULL) +
+  ggtitle("CytoSig sample median: ACI − CTRL")
+ggsave(file.path(res_path, "04_cytosig_pt_bin_delta.pdf"), p_cs_d, width = 8, height = 6, dpi = 600)
+p_cs_d
+print(dplyr::filter(bin_cs, .data$p < 0.05))
+```
+
+```{r}
+sessionInfo()
+```

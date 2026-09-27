@@ -39,6 +39,8 @@ Source is in `codes/`. Rendered HTML is copied to `docs/` for Pages. `data/` and
 | `codes/09_progeny.qmd` | PROGENy mlm (all cells + neutrophil lineage) |
 | `codes/10_neut_decouple.qmd` | Neutrophil CollecTRI ulm |
 | `codes/11_cytosig.qmd` | CytoSig (conda `cytosig`) |
+| `codes/12_traj_activity.qmd` | Slingshot PT × PROGENy / TF / CytoSig |
+| `codes/13_hspc_trajectory.qmd` | HSC → MEP / GMP / MDP trajectory |
 | `codes/plot_colors.R` | Shared palettes |
 | `codes/activity_helpers.R` | Activity stats / heatmap helpers |
 

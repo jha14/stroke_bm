@@ -1,0 +1,387 @@
+---
+title: "HSPC trajectory (HSC → MEP / GMP / MDP)"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+<!-- reader-guide -->
+干祖自己的发育轴，和 08 中性粒轴分开。看 HSC 是不是还连到 MEP、GMP、MDP；ACI 有没有更偏向粒系（GMP）。CytoTRACE2 高分更早。拟时间不是小时。09–11 / 12 还没接到这条轴上。分组仍叠着 5′/3′。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(
+  Seurat, tidyverse, qs2, harmony, tictoc, cowplot, ggh4x,
+  CytoTRACE2, slingshot
+)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/plot_colors.R")
+source("codes/activity_helpers.R")
+summarise <- dplyr::summarise
+mutate <- dplyr::mutate
+filter <- dplyr::filter
+rename <- dplyr::rename
+arrange <- dplyr::arrange
+group_by <- dplyr::group_by
+ungroup <- dplyr::ungroup
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/hspc_trajectory"
+obj_path <- "data/rdata/hspc_trajectory"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+alpha <- 0.45
+pt_size <- 0.4
+raster <- FALSE
+raster_dpi <- c(3000, 3000)
+n_hvg <- 3000
+n_dims <- 20
+traj_levels <- c("HSC", "MEP", "GMP", "MDP")
+traj_col <- annot_sub_col[traj_levels]
+```
+
+### 1. Subset HSPC
+<!-- step-note -->
+只留 HSC、MEP、GMP、MDP。GMP 也会出现在 08 的粒系轴上，那是下游，不是把两条轴画成一条。
+
+```{r message=FALSE, warning=FALSE}
+test_genes <- qs_read("data/rdata/test_genes.qs2", nthreads = 10)
+seurat_object <- qs_read("data/rdata/seurat_object_final.qs2", nthreads = 10)
+stopifnot(all(c("sample", "group", "annot_sub") %in% colnames(seurat_object[[]])))
+seurat_object$group <- factor(seurat_object$group, levels = c("CTRL", "ACI"))
+keep <- as.character(seurat_object$annot_sub) %in% traj_levels
+print(table(seurat_object$annot_sub[keep], seurat_object$group[keep]))
+seurat_object <- seurat_object[, keep]
+seurat_object$annot_sub <- factor(
+  as.character(seurat_object$annot_sub),
+  levels = traj_levels
+)
+dim(seurat_object)
+```
+
+```{r message=FALSE, warning=FALSE}
+if (length(Layers(seurat_object, search = "counts")) > 1) {
+  seurat_object <- JoinLayers(seurat_object)
+}
+seurat_object[["RNA"]]$data <- NULL
+seurat_object[["RNA"]]$scale.data <- NULL
+```
+
+### 2. Normalize, HVG, PCA, Harmony, UMAP
+<!-- step-note -->
+细胞集合变了，重做降维。UMAP 用 20 个 Harmony 维，和 06 一致。不重新聚类。
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+seurat_object <- FindVariableFeatures(
+  seurat_object, nfeatures = n_hvg, verbose = TRUE
+)
+pca_features <- setdiff(
+  VariableFeatures(seurat_object),
+  test_genes$gene[test_genes$unwant | test_genes$ig | test_genes$tr]
+)
+seurat_object <- ScaleData(
+  seurat_object, features = pca_features, assay = "RNA"
+)
+seurat_object <- RunPCA(
+  seurat_object, npcs = 50, features = pca_features,
+  verbose = TRUE, reduction.name = "pca"
+)
+ElbowPlot(seurat_object, reduction = "pca", ndims = 50)
+```
+
+```{r message=FALSE, warning=FALSE}
+tic("Harmony")
+seurat_object <- RunHarmony(
+  seurat_object, c("sample"), ncores = 15, plot_convergence = TRUE
+)
+toc()
+seurat_object <- RunUMAP(
+  seurat_object, dims = 1:n_dims, reduction = "harmony",
+  reduction.name = "umap"
+)
+```
+
+### 3. Annotation UMAP
+<!-- step-note -->
+HSC 应靠近中心或一端，MEP / GMP / MDP 往外分。若三类完全叠在一起，后面的分叉不可信。
+
+```{r message=FALSE, warning=FALSE}
+plot_umap_short(
+  seurat_object, group.by = "annot_sub", cols = traj_col,
+  pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+  label = TRUE, label.size = 4, legend = TRUE
+)
+ggsave(file.path(res_path, "01_umap_annot.pdf"), width = 8, height = 7, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  plot_umap_short(
+    subset(seurat_object, group == "CTRL"),
+    group.by = "annot_sub", cols = traj_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, title = "CTRL"
+  ),
+  plot_umap_short(
+    subset(seurat_object, group == "ACI"),
+    group.by = "annot_sub", cols = traj_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi,
+    label = FALSE, title = "ACI"
+  )
+)
+ggsave(file.path(res_path, "01_umap_by_group.pdf"), width = 14, height = 7, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+plot_grid(
+  ncol = 2,
+  DimPlot(
+    seurat_object, reduction = "umap", group.by = "sample",
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1),
+  DimPlot(
+    seurat_object, reduction = "umap", group.by = "group", cols = group_col,
+    pt.size = pt_size, alpha = alpha, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+)
+ggsave(file.path(res_path, "01_umap_sample_group.pdf"), width = 14, height = 7, dpi = 600)
+```
+
+### 4. CytoTRACE2
+<!-- step-note -->
+HSC 应偏高，成熟方向（尤其 MEP 偏红系）应偏低。两组密度差可能只是 GMP 占比不同。
+
+```{r message=FALSE, warning=FALSE}
+cyto_qs2 <- file.path(obj_path, "cytotrace_hspc.qs2")
+cyto_cache <- NULL
+if (file.exists(cyto_qs2)) {
+  cyto_cache <- qs_read(cyto_qs2, nthreads = 10)
+}
+same_n <- !is.null(cyto_cache) && nrow(cyto_cache) == ncol(seurat_object)
+same_cells <- same_n &&
+  identical(sort(rownames(cyto_cache)), sort(colnames(seurat_object)))
+if (same_cells) {
+  message("Reuse CytoTRACE2 qs2. Skip cytotrace2().")
+  cyto_cache <- cyto_cache[colnames(seurat_object), , drop = FALSE]
+  seurat_object <- AddMetaData(seurat_object, cyto_cache)
+} else {
+  counts_mat <- LayerData(seurat_object, assay = "RNA", layer = "counts")
+  seurat_object[["RNA"]]$counts <- as(counts_mat, "dgCMatrix")
+  seurat_object <- cytotrace2(
+    seurat_object, species = "human", is_seurat = TRUE, ncores = 10
+  )
+  cyto_cols <- grep("^CytoTRACE2", colnames(seurat_object[[]]), value = TRUE)
+  cyto_out <- FetchData(seurat_object, vars = cyto_cols)
+  qs_save(cyto_out, cyto_qs2, nthreads = 10)
+}
+table(seurat_object$CytoTRACE2_Potency)
+summary(seurat_object$CytoTRACE2_Score)
+```
+
+```{r message=FALSE, warning=FALSE}
+FeaturePlot(
+  seurat_object, reduction = "umap", features = "CytoTRACE2_Score",
+  pt.size = pt_size, raster = raster, raster.dpi = raster_dpi
+) + theme(aspect.ratio = 1)
+ggsave(file.path(res_path, "02_cytotrace_umap.pdf"), width = 8, height = 7, dpi = 600)
+```
+
+```{r message=FALSE, warning=FALSE}
+cyto_meta <- FetchData(
+  seurat_object, vars = c("sample", "group", "annot_sub", "CytoTRACE2_Score")
+)
+p_cyto_box <- ggplot(cyto_meta, aes(x = annot_sub, y = CytoTRACE2_Score, fill = annot_sub)) +
+  geom_boxplot(outlier.size = 0.2, width = 0.7) +
+  scale_fill_manual(values = traj_col) +
+  theme_classic() +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab("CytoTRACE2")
+ggsave(file.path(res_path, "02_cytotrace_by_subtype.pdf"), p_cyto_box, width = 6, height = 5, dpi = 600)
+p_cyto_box
+
+sample_cyto <- cyto_meta |>
+  dplyr::group_by(sample, group) |>
+  dplyr::summarise(
+    n_cell = dplyr::n(),
+    cyto_median = median(CytoTRACE2_Score, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  dplyr::filter(n_cell >= min_cells_sample)
+cyto_test <- wilcox_ctrl_aci(sample_cyto$cyto_median, sample_cyto$group) |>
+  dplyr::mutate(feature = "cyto_median") |>
+  add_stars()
+write_csv(sample_cyto, file.path(res_path, "02_sample_cytotrace.csv"))
+write_csv(cyto_test, file.path(res_path, "02_sample_cytotrace_wilcox.csv"))
+print(cyto_test)
+```
+
+### 5. Slingshot
+<!-- step-note -->
+起点 HSC。若推断出多条 lineage，看 GMP 那条是不是 ACI 更占。拟时间是转录组距离。不做 tradeSeq。
+
+```{r message=FALSE, warning=FALSE}
+sling <- list()
+sling$dimred <- Embeddings(seurat_object, "umap")[, 1:2]
+sling$clustering <- seurat_object$annot_sub
+sling$slingshot <- slingshot(
+  sling$dimred,
+  sling$clustering,
+  start.clus = "HSC",
+  stretch = 0
+)
+sling$curves <- slingCurves(sling$slingshot, as.df = TRUE)
+sling$pseudotime <- as.data.frame(slingPseudotime(sling$slingshot))
+stopifnot(identical(rownames(sling$dimred), colnames(seurat_object)))
+print(slingLineages(sling$slingshot))
+```
+
+```{r message=FALSE, warning=FALSE}
+pt_cols <- grep("^Lineage", colnames(sling$pseudotime), value = TRUE)
+for (ln in pt_cols) {
+  seurat_object[[paste0("sling_", ln)]] <- sling$pseudotime[[ln]]
+}
+
+curve_xy <- sling$curves
+xy <- intersect(colnames(curve_xy), c("umap_1", "UMAP_1", "umap_2", "UMAP_2"))
+stopifnot(length(xy) >= 2)
+curve_xy <- curve_xy |>
+  dplyr::rename(x = dplyr::all_of(xy[1]), y = dplyr::all_of(xy[2]))
+lab_df <- curve_xy |>
+  dplyr::group_by(Lineage) |>
+  dplyr::slice_max(order_by = .data$Order, n = 1, with_ties = FALSE) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(lab = paste0("L", Lineage))
+
+plot_df <- as.data.frame(sling$dimred) |>
+  mutate(annot_sub = sling$clustering)
+x_umap <- colnames(plot_df)[1]
+y_umap <- colnames(plot_df)[2]
+
+p_sling <- ggplot(plot_df, aes(.data[[x_umap]], .data[[y_umap]])) +
+  geom_point(aes(color = annot_sub), shape = 19, size = 0.35, alpha = 0.45) +
+  geom_path(
+    data = curve_xy |> dplyr::arrange(.data$Lineage, .data$Order),
+    aes(x = x, y = y, group = Lineage),
+    arrow = arrow(type = "closed", length = unit(0.35, "cm")),
+    linewidth = 1.1
+  ) +
+  geom_text(
+    data = lab_df, aes(x = x, y = y, label = lab),
+    size = 5, fontface = "bold", vjust = 1.2
+  ) +
+  scale_color_manual(values = traj_col) +
+  theme_classic() +
+  theme_umap_short() +
+  theme(legend.position = "right") +
+  xlab("UMAP-1") +
+  ylab("UMAP-2") +
+  scale_x_continuous(breaks = NULL) +
+  scale_y_continuous(breaks = NULL) +
+  guides(x = umap_trunc_axis(), y = umap_trunc_axis())
+ggsave(file.path(res_path, "03_slingshot_umap.pdf"), p_sling, width = 8, height = 7, dpi = 600)
+p_sling
+```
+
+```{r message=FALSE, warning=FALSE}
+if (length(pt_cols) > 0) {
+  FeaturePlot(
+    seurat_object, reduction = "umap", features = paste0("sling_", pt_cols[1]),
+    pt.size = pt_size, raster = raster, raster.dpi = raster_dpi
+  ) + theme(aspect.ratio = 1)
+  ggsave(
+    file.path(res_path, "03_slingshot_pt_l1.pdf"),
+    width = 8, height = 7, dpi = 600
+  )
+}
+
+hspc_meta <- FetchData(
+  seurat_object,
+  vars = c("sample", "group", "annot_sub", paste0("sling_", pt_cols))
+) |>
+  rownames_to_column("barcode")
+write_csv(hspc_meta, file.path(res_path, "03_hspc_pseudotime_cells.csv"))
+
+# Fate: among cells assigned to a lineage, fraction ending toward GMP vs MEP vs MDP.
+lin_map <- slingLineages(sling$slingshot)
+end_clus <- vapply(lin_map, function(x) tail(x, 1), character(1))
+print(end_clus)
+
+pt_mat <- as.matrix(sling$pseudotime)
+idx <- max.col(replace(pt_mat, is.na(pt_mat), -Inf), ties.method = "first")
+assigned <- colnames(pt_mat)[idx]
+ok_pt <- is.finite(pt_mat[cbind(seq_len(nrow(pt_mat)), idx)])
+assigned[!ok_pt] <- NA
+hspc_meta$lineage_end <- unname(end_clus[assigned])
+fate <- hspc_meta |>
+  dplyr::filter(!is.na(.data$lineage_end)) |>
+  dplyr::count(sample, group, lineage_end, name = "n") |>
+  dplyr::group_by(sample, group) |>
+  dplyr::mutate(frac = n / sum(n)) |>
+  dplyr::ungroup()
+write_csv(fate, file.path(res_path, "03_sample_fate_frac.csv"))
+print(fate)
+
+p_fate <- ggplot(fate, aes(x = group, y = frac, fill = group)) +
+  geom_boxplot(width = 0.55, outlier.shape = NA) +
+  geom_jitter(width = 0.12, size = 2) +
+  facet_wrap(~lineage_end) +
+  scale_fill_manual(values = group_col) +
+  theme_classic() +
+  theme(legend.position = "none") +
+  xlab(NULL) +
+  ylab("Fraction of HSPC on this lineage")
+ggsave(file.path(res_path, "03_fate_frac.pdf"), p_fate, width = 9, height = 4.5, dpi = 600)
+p_fate
+
+fate_test <- fate |>
+  tidyr::complete(sample, lineage_end, fill = list(frac = 0, n = 0)) |>
+  dplyr::left_join(dplyr::distinct(hspc_meta, sample, group), by = "sample") |>
+  dplyr::group_by(lineage_end) |>
+  dplyr::group_modify(function(d, k) {
+    wilcox_ctrl_aci(d$frac, d$group)
+  }) |>
+  dplyr::ungroup() |>
+  add_stars()
+write_csv(fate_test, file.path(res_path, "03_fate_frac_wilcox.csv"))
+print(fate_test)
+```
+
+```{r message=FALSE, warning=FALSE}
+qs_save(sling, file.path(obj_path, "slingshot_hspc.qs2"), nthreads = 10)
+qs_save(
+  seurat_object,
+  file.path(obj_path, "seurat_object_hspc_traj.qs2"),
+  nthreads = 10
+)
+```
+
+```{r}
+sessionInfo()
+```
