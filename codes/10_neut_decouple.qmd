@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-同一批细胞（GMP + Pre-Neut + Neut）上的转录因子活性。正分表示该 TF 的靶基因整体上调。TF 活性不等于该 TF 自己的 mRNA。这里按亚型阶段；和拟时间对齐见 12。
+中性粒谱系（GMP 到成熟粒）的转录因子活性。展示与发育阶段相关最强的 30 个 TF。活性不等于该 TF 自己的 mRNA。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(

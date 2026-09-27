@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-单核、cDC2、pDC。本数据没有典型巨噬细胞大类。看最后的命名即可。
+单核、cDC2、pDC。本数据没有典型巨噬细胞大类。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, presto, SCpubr, scop)

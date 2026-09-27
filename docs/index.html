@@ -23,10 +23,10 @@
 </head>
 <body>
   <h1>颅骨骨髓 scRNA-seq：急性脑梗死 vs 对照</h1>
-  <p class="lead">组织是颅骨骨髓。先有急性脑梗死（ACI）5 例，再按性别、年龄匹配选了对照（CTRL）6 例。图里蓝色是 CTRL，红色是 ACI。比较都以 CTRL 为对照。</p>
+  <p class="lead">颅骨骨髓单细胞转录组。急性脑梗死（ACI）5 例，对照（CTRL）6 例按性别、年龄匹配。图中蓝色 CTRL，红色 ACI。组间比较以 CTRL 为对照。</p>
 
   <h2>样本</h2>
-  <p>ACI 4 男 1 女，年龄 35–75 岁。CTRL 3 男 3 女，年龄 30–77 岁。</p>
+  <p>ACI 4 男 1 女，35–75 岁。CTRL 3 男 3 女，30–77 岁。</p>
   <table>
     <thead>
       <tr><th>样本</th><th>分组</th><th>性别</th><th>年龄</th><th>文库</th></tr>
@@ -47,61 +47,59 @@
   </table>
 
   <div class="warn">
-    <strong>两组不是同一实验室、同一批次、同时取的样本。</strong>
-    对照全部是 5′ 文库，ACI 全部是 3′ 文库，分组和测序化学完全叠在一起。
-    现在看到的 CTRL vs ACI 差异，没法从设计上拆开「疾病」和「实验室 / 取样处理 / 5′ vs 3′」。
-    Harmony 只能减弱样本之间的技术差异，纠正不了这种与分组完全共线的平台差异。读后面任何组间图时都要把这一点放在心里。
+    两组不是同一实验室、同一批次同时采集。CTRL 全部 5′ 文库，ACI 全部 3′ 文库，疾病分组与平台完全共线。Harmony 只能减弱样本间差异，不能把疾病效应从实验室、取样和 5′/3′ 里拆开。读组间结果时需要把这一点算进去。
   </div>
 
   <div class="guide">
-    分析在问：急性脑梗后颅骨骨髓里中性粒细胞和前体比例有没有升高；升高之后这些细胞的发育、通路、转录因子和细胞因子响应有没有变；HSC 有没有更偏向粒系。07 看组成，08–11 看中性粒状态，12 把拟时间接上去，13 看 HSC 自己的轴。00–06 是质控和命名。建议按 07 → 13 读结论。
+    问题：急性脑梗后颅骨骨髓造血发生了什么——中性粒是否扩增、粒系和 HSC 的状态由什么驱动、能否提示干预靶点。<br>
+    顺序：00–06 质控与命名；07 细胞组成；08 粒系发育轴；09–11 通路、转录因子、细胞因子响应；12 把粒系拟时间与这些分数对齐；13 HSC 向 MEP / GMP / MDP 的命运。
   </div>
 
-  <h2>读图时注意</h2>
+  <h2>读图</h2>
   <ul>
-    <li>组间结论看<strong>每个样本一个点</strong>（CTRL 6 vs ACI 5）。不要把上万个细胞直接拿去比两组——细胞一多，p 几乎都会显著，不等于每例病人都变了。</li>
-    <li>星号：<code>*</code> p&lt;0.05，<code>**</code> &lt;0.01，<code>***</code> &lt;0.001。09–11 样本级比较没有做 BH 校正。</li>
-    <li>热图蓝低红高。均值热图是相对高低，不是蛋白定量。Δ 热图是 ACI 减去 CTRL，红表示 ACI 更高。</li>
-    <li>UMAP 上靠近表示转录组更像，一般不是时间轴。发育先后看 08。</li>
+    <li>组间看<strong>每个样本一个点</strong>（6 vs 5）。细胞级 Wilcoxon 几乎都会显著，不能当成每例病人都变了。</li>
+    <li><code>*</code> p&lt;0.05，<code>**</code> &lt;0.01，<code>***</code> &lt;0.001。09–11 样本级比较不做 BH 校正。</li>
+    <li>热图蓝低红高，表示相对高低，不是蛋白定量。Δ = ACI − CTRL。</li>
+    <li>UMAP 邻近表示转录组更像。发育先后看 08 和 13 的拟时间。</li>
   </ul>
 
   <h2>报告</h2>
   <ol>
-    <li><a href="00_qc.html">00 质控</a> — 去掉空液滴、双细胞、线粒体过高的细胞。</li>
-    <li><a href="01_clustering.html">01 聚类</a> — 把相似细胞聚在一起；Harmony 减弱样本间的技术差异。</li>
-    <li><a href="02_marker_plot.html">02 Marker</a> — 用经典基因核对各大类在图上的位置。</li>
-    <li><a href="03_1_prediction.html">03.1 导出</a> — 转成 CellTypist 需要的格式。</li>
-    <li><a href="03_2_celltypist.html">03.2 CellTypist</a> — 公开参考集给的标签，不是最终命名；骨髓中性粒常被标成单核。</li>
-    <li><a href="04_annotation.html">04 大类命名</a> — 按 marker 把 cluster 收成 HSPC、B、中性粒等。</li>
-    <li><a href="05_1_hspc.html">05.1 HSPC</a>、<a href="05_2_b_plasma.html">05.2 B / 浆细胞</a>、<a href="05_3_tnk.html">05.3 T / NK</a>、<a href="05_4_myeloid.html">05.4 单核 / DC</a>、<a href="05_5_neutrophil.html">05.5 中性粒</a>、<a href="05_6_erythrocyte.html">05.6 红系</a> — 各大类再细分。中性粒这篇后面会反复用到。</li>
-    <li><a href="06_final.html">06 合并</a> — 亚型拼回去，后面分析用这份对象。</li>
-    <li><a href="07_1_composition.html">07.1 组成</a> — 每例里各类细胞占多少；Wilcoxon 和 miloR 是补充。</li>
-    <li><a href="07_2_sccoda.html">07.2 scCODA</a> — 组成变化的主模型，优先看这里。</li>
-    <li><a href="08_neut_trajectory.html">08 轨迹</a> — GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条轴。</li>
-    <li><a href="09_progeny.html">09 通路</a> — JAK-STAT、NFκB、TNFα 等通路活性（从靶基因推断）。</li>
-    <li><a href="10_neut_decouple.html">10 转录因子</a> — 哪些 TF 随发育升降、两组是否不同。</li>
-    <li><a href="11_cytosig.html">11 CytoSig</a> — 转录组看起来像被哪些细胞因子作用过，不是直接测到的浓度。</li>
-    <li><a href="12_traj_activity.html">12 拟时间 × 通路 / TF / CytoSig</a> — 08 的轴接到 09–11：进度有没有提前，分数是顺着发育变还是同一位置就不同。</li>
-    <li><a href="13_hspc_trajectory.html">13 HSPC 轨迹</a> — HSC → MEP / GMP / MDP，和中性粒轴分开；看有没有更偏向粒系。</li>
+    <li><a href="00_qc.html">00 质控</a> — 过滤空液滴、双细胞和线粒体过高的细胞。</li>
+    <li><a href="01_clustering.html">01 聚类</a> — Harmony 整合后聚类。</li>
+    <li><a href="02_marker_plot.html">02 Marker</a> — 经典基因核对大类位置。</li>
+    <li><a href="03_1_prediction.html">03.1 导出</a> — 写成 CellTypist 用的 h5ad。</li>
+    <li><a href="03_2_celltypist.html">03.2 CellTypist</a> — 参考标签，不是最终命名。</li>
+    <li><a href="04_annotation.html">04 大类命名</a> — HSPC、B、中性粒等。</li>
+    <li><a href="05_1_hspc.html">05.1 HSPC</a>、<a href="05_2_b_plasma.html">05.2 B / 浆细胞</a>、<a href="05_3_tnk.html">05.3 T / NK</a>、<a href="05_4_myeloid.html">05.4 单核 / DC</a>、<a href="05_5_neutrophil.html">05.5 中性粒</a>、<a href="05_6_erythrocyte.html">05.6 红系</a> — 亚型命名。</li>
+    <li><a href="06_final.html">06 合并</a> — 得到 annot_main / annot_sub。</li>
+    <li><a href="07_1_composition.html">07.1 组成</a> — 各例占比；Wilcoxon、miloR 为补充。</li>
+    <li><a href="07_2_sccoda.html">07.2 scCODA</a> — 组成变化的主模型。</li>
+    <li><a href="08_neut_trajectory.html">08 粒系轨迹</a> — GMP → 早幼粒 → Pre-Neut → 成熟粒。</li>
+    <li><a href="09_progeny.html">09 通路</a> — PROGENy 推断的通路活性。</li>
+    <li><a href="10_neut_decouple.html">10 转录因子</a> — 中性粒谱系 30 个与阶段相关的 TF。</li>
+    <li><a href="11_cytosig.html">11 CytoSig</a> — 细胞因子响应签名，不是测到的浓度。</li>
+    <li><a href="12_traj_activity.html">12 拟时间与活性</a> — 粒系轴上的进度和通路 / TF / 细胞因子。</li>
+    <li><a href="13_hspc_trajectory.html">13 HSPC 轨迹</a> — HSC → MEP / GMP / MDP。</li>
   </ol>
 
-  <h2>现有数据还可以再挖</h2>
+  <h2>可以继续做的分析</h2>
   <ul>
-    <li>细胞通讯（CellChat / NicheNet 一类）：中性粒和 HSC 被谁影响、又影响谁。</li>
-    <li>按亚型做样本级差异基因（pseudobulk），再和 09–11 对上。</li>
-    <li>把 13 的 HSC 拟时间接到通路 / TF / CytoSig（现在 12 只接了中性粒轴）。</li>
-    <li>组成和活性一起看：哪例 GMP / 中性粒占比高，是不是同时某条细胞因子响应也高。</li>
+    <li>细胞通讯：HSC 和中性粒被谁影响、又影响谁。</li>
+    <li>亚型水平的样本级差异基因，与通路、TF、细胞因子结果对照。</li>
+    <li>把 HSC 拟时间与通路 / TF / CytoSig 对齐（12 目前对齐的是粒系轴）。</li>
+    <li>组成与活性联合：GMP / 中性粒占比高的样本，细胞因子签名是否也高。</li>
   </ul>
 
-  <h2>以后补数据和实验可以围绕什么</h2>
-  <p>最好先补能拆开「疾病 vs 平台」的数据：同一实验室、同一套取样和建库，CTRL 和 ACI 都用 3′ 或都用 5′。有条件再配对外周血、脑实质或脑膜，看颅骨骨髓的变化是不是系统性的。</p>
+  <h2>数据和实验上可以补什么</h2>
+  <p>优先补同一实验室、同一套 3′ 或 5′ 的 CTRL 与 ACI，用来拆开疾病和平台。有条件再配对外周血或脑组织。</p>
   <ul>
-    <li>测序拓展：CITE-seq 或蛋白验证；空间转录组看中性粒和其他细胞的位置关系；加大例数，把年龄、性别放进模型。</li>
-    <li>功能实验：骨髓上清或血浆的 G-CSF、IFN 等 ELISA；体外刺激中性粒 / GMP，看能否复现 09–11 里的通路和细胞因子签名；ROS、NETosis、迁移等功能读出。</li>
-    <li>机制实验：共培养或条件培养基，看中性粒如何影响 HSPC 或其他免疫细胞；对通讯分析里排到前面的配体–受体做阻断或敲低。</li>
+    <li>测序：蛋白（CITE-seq）、空间位置、更大例数，年龄性别进入模型。</li>
+    <li>功能：G-CSF / IFN 等 ELISA；体外刺激能否复现签名；ROS、NETosis、迁移。</li>
+    <li>机制：共培养或阻断通讯分析里靠前的配体–受体。</li>
   </ul>
-  <p>PROGENy、转录因子、CytoSig 都是从 RNA 推断的活性，不是 ELISA 或磷酸化检测。12 已把中性粒拟时间接到这些分数上；13 的 HSC 轴还没有接到通路统计。性别和年龄用于选对照，没有放进统计模型。没有配对外周血、脑实质，也没有蛋白或空间数据。</p>
+  <p>通路、转录因子和 CytoSig 都是 RNA 推断，不是 ELISA 或磷酸化。性别和年龄用于选对照，未进入统计模型。</p>
 
-  <p class="note">代码：<a href="https://github.com/jha14/stroke_bm">github.com/jha14/stroke_bm</a>。建议看这些 HTML，不必打开 <code>.qmd</code>。</p>
+  <p class="note">代码：<a href="https://github.com/jha14/stroke_bm">github.com/jha14/stroke_bm</a>。建议阅读 HTML。</p>
 </body>
 </html>

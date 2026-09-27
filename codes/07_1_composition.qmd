@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-每例里各类细胞占多少。每个点是一例的占比。中性粒升高时其他类型会被挤低，不一定是绝对减少。主结论看 07.2；这里 Wilcoxon 和 miloR 是补充。组间差异仍可能混有 5′/3′ 和实验室差异。
+各例里各类细胞占多少。占比是相对数。主模型在 scCODA；这里 Wilcoxon 和 miloR 为补充。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(

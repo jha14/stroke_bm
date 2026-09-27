@@ -2241,7 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p>每例里各类细胞占多少。每个点是一例的占比。中性粒升高时其他类型会被挤低，不一定是绝对减少。主结论看 07.2；这里 Wilcoxon 和 miloR 是补充。组间差异仍可能混有 5′/3′ 和实验室差异。</p><p>样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 <code>07_2_sccoda.ipynb</code> 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p><p>先跑本脚本，再在 conda <code>stroke_bm</code> 里跑 <code>codes/07_2_sccoda.ipynb</code>。</p>
+<p>各例里各类细胞占多少。占比是相对数。主模型在 scCODA；这里 Wilcoxon 和 miloR 为补充。</p><p>样本级细胞占比（描述 + Wilcoxon 敏感性分析），导出给 <code>07_2_sccoda.ipynb</code> 做 scCODA / tascCODA，再用 miloR 做邻域差异丰度。主结论看成分模型；Wilcoxon 和 Milo 是补充。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p><p>先跑本脚本，再在 conda <code>stroke_bm</code> 里跑 <code>codes/07_2_sccoda.ipynb</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, cowplot, SingleCellExperiment</span>

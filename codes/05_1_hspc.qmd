@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-造血干祖亚型（HSC、MEP、GMP、MDP）。取出这一大类后重新降维、去低质量、用 marker 命名。看最后的命名和点图即可。GMP 后面会并进中性粒轨迹。
+造血干祖亚型：HSC、MEP、GMP、MDP。看最后的命名和 marker 点图。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, presto, SCpubr, scop)

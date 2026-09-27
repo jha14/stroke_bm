@@ -21,7 +21,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-干祖自己的发育轴，和 08 中性粒轴分开。Slingshot 在 Harmony 空间里拟合，强制从 **HSC** 出发、在 MEP / GMP / MDP 结束，再把曲线嵌回 UMAP 方便看。UMAP 上 HSC 往往在分叉中间，不像「从角落出发」，那是投影，不是起点错了。拟时间不是小时。09–11 / 12 还没接到这条轴上。分组仍叠着 5′/3′。
+HSC 向 MEP、GMP、MDP 的命运。拟时间在 Harmony 上计算；图上的线是 UMAP 里平滑后的曲线，白圈为 HSC，箭头沿曲线指向终点。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(
@@ -244,7 +244,7 @@ print(cyto_test)
 
 ### 5. Slingshot
 <!-- step-note -->
-在 Harmony（20 维）上拟合，起点 HSC，终点 MEP、GMP、MDP。曲线再嵌到 UMAP 上画。黑点标 HSC 中心；箭头在终点。若某条 lineage 的拟时间中位数 HSC 不是最低，这条轴不可信。
+拟时间在 Harmony 上计算，起点 HSC，终点 MEP、GMP、MDP。图上的线是 UMAP 里单独拟合、再平滑过的曲线；白圈是 HSC，箭头贴着线指向终点。
 
 ```{r message=FALSE, warning=FALSE}
 sling <- list()
@@ -272,9 +272,22 @@ if (!all(lin_ok)) {
   )
   stop("Slingshot lineages do not all start at HSC: ", paste(lin_txt, collapse = "; "))
 }
-sling$slingshot <- embedCurves(sling$slingshot_fit, sling$dimred)
-sling$curves <- slingCurves(sling$slingshot, as.df = TRUE)
+# UMAP curves for display only: same start/end, fewer knots, then spline-smooth.
+sling$slingshot_umap <- getLineages(
+  sling$dimred,
+  sling$clustering,
+  start.clus = "HSC",
+  end.clus = c("MEP", "GMP", "MDP")
+)
+sling$slingshot_umap <- getCurves(
+  sling$slingshot_umap,
+  approx_points = 40,
+  stretch = 0,
+  shrink = TRUE
+)
+sling$curves <- slingCurves(sling$slingshot_umap, as.df = TRUE)
 sling$pseudotime <- as.data.frame(slingPseudotime(sling$slingshot_fit))
+sling$slingshot <- sling$slingshot_fit
 stopifnot(identical(rownames(sling$dimred_fit), colnames(seurat_object)))
 ```
 
@@ -294,8 +307,36 @@ if (length(xy) < 2) {
 }
 stopifnot(length(xy) >= 2)
 curve_xy <- curve_xy |>
-  dplyr::rename(x = dplyr::all_of(xy[1]), y = dplyr::all_of(xy[2]))
-lab_df <- curve_xy |>
+  dplyr::rename(x = dplyr::all_of(xy[1]), y = dplyr::all_of(xy[2])) |>
+  dplyr::arrange(.data$Lineage, .data$Order)
+
+smooth_one <- function(d, n_pts = 50, spar = 0.75) {
+  o <- seq(min(d$Order), max(d$Order), length.out = n_pts)
+  sx <- stats::smooth.spline(d$Order, d$x, spar = spar)
+  sy <- stats::smooth.spline(d$Order, d$y, spar = spar)
+  data.frame(
+    Order = o,
+    x = as.numeric(stats::predict(sx, o)$y),
+    y = as.numeric(stats::predict(sy, o)$y)
+  )
+}
+curve_sm <- curve_xy |>
+  dplyr::group_by(Lineage) |>
+  dplyr::group_modify(~ smooth_one(.x)) |>
+  dplyr::ungroup()
+n_arr <- 8L
+arrow_df <- curve_sm |>
+  dplyr::group_by(Lineage) |>
+  dplyr::filter(dplyr::n() >= n_arr) |>
+  dplyr::slice((dplyr::n() - n_arr + 1):dplyr::n()) |>
+  dplyr::summarise(
+    x = dplyr::first(.data$x),
+    y = dplyr::first(.data$y),
+    xend = dplyr::last(.data$x),
+    yend = dplyr::last(.data$y),
+    .groups = "drop"
+  )
+lab_df <- curve_sm |>
   dplyr::group_by(Lineage) |>
   dplyr::slice_max(order_by = .data$Order, n = 1, with_ties = FALSE) |>
   dplyr::ungroup() |>
@@ -311,10 +352,19 @@ y_umap <- colnames(plot_df)[2]
 p_sling <- ggplot(plot_df, aes(.data[[x_umap]], .data[[y_umap]])) +
   geom_point(aes(color = annot_sub), shape = 19, size = 0.35, alpha = 0.45) +
   geom_path(
-    data = curve_xy |> dplyr::arrange(.data$Lineage, .data$Order),
+    data = curve_sm,
     aes(x = x, y = y, group = Lineage),
-    arrow = arrow(type = "closed", length = unit(0.35, "cm")),
-    linewidth = 1.1
+    linewidth = 1.15,
+    lineend = "round",
+    linejoin = "round"
+  ) +
+  geom_segment(
+    data = arrow_df,
+    aes(x = x, y = y, xend = xend, yend = yend),
+    inherit.aes = FALSE,
+    linewidth = 1.15,
+    lineend = "butt",
+    arrow = arrow(type = "closed", length = unit(0.38, "cm"))
   ) +
   geom_point(
     data = start_df, aes(x = x, y = y),
@@ -324,11 +374,11 @@ p_sling <- ggplot(plot_df, aes(.data[[x_umap]], .data[[y_umap]])) +
   geom_text(
     data = start_df, aes(x = x, y = y),
     inherit.aes = FALSE,
-    label = "start HSC", fontface = "bold", size = 3.5, vjust = -1.2
+    label = "HSC", fontface = "bold", size = 3.5, vjust = -1.2
   ) +
   geom_text(
     data = lab_df, aes(x = x, y = y, label = lab),
-    size = 5, fontface = "bold", vjust = 1.2
+    size = 4.5, fontface = "bold", vjust = 1.3
   ) +
   scale_color_manual(values = traj_col) +
   theme_classic() +

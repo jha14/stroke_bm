@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-用经典 marker 核对各大类在图上的位置。点大、颜色深表示更多细胞、更高表达。一种基因铺满整张图，多半是作图问题。
+用经典 marker 核对各大类在图上的位置。点大、颜色深表示该基因更常见、表达更高。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, cowplot)

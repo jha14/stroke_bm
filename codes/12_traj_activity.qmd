@@ -21,7 +21,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-把 08 的 Slingshot 拟时间接到 09–11 已经算好的分数上。问两件事：ACI 是不是在轴上更靠前或更靠后（组成/进度）；通路和细胞因子是顺着发育变，还是两组在同一位置就不同。细胞级平滑曲线会很好看，组间结论仍看每个样本一个点。CTRL 5′ / ACI 3′ 仍然叠在分组上。这里不用 tradeSeq。
+把粒系拟时间与通路、转录因子、细胞因子分数对齐。看发育进度，以及同一位置上两组是否已经不同。组间仍看每个样本一个点。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, cowplot, ggpubr)

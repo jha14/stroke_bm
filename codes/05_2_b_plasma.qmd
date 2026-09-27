@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-B 细胞和浆细胞亚型。PCA 去掉 IG 基因，避免克隆型把分群带着走。看最后的命名即可。
+B 细胞和浆细胞亚型。PCA 不含 IG 基因，避免克隆型主导分群。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, presto, SCpubr, scop)

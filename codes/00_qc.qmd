@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-质控。先有 ACI 5 例，再按性别、年龄匹配选了 CTRL 6 例。CTRL 全是 5′、ACI 全是 3′，而且不是同一实验室、同一批次取的（见首页）。这里去掉空液滴、双细胞和线粒体过高的细胞。某一例掉得特别多，优先考虑文库质量。
+读入 11 例颅骨骨髓 10x 矩阵并做质控：去掉空液滴、双细胞和线粒体过高的细胞。对照按性别、年龄与 ACI 匹配。取样批次和 5′/3′ 文库见首页。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, scDblFinder, BiocParallel)

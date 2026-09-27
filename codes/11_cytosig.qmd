@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-转录组看起来像被哪些细胞因子作用过，不是 ELISA。Lollipop 高度是样本级 ACI 减去 CTRL。亚型热图看信号停在哪一段；和拟时间对齐见 12。
+CytoSig：转录组看起来像被哪些细胞因子作用过，不是 ELISA。Lollipop 是样本级 ACI 减去 CTRL。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(

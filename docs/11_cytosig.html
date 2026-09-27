@@ -2241,7 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p>转录组看起来像被哪些细胞因子作用过，不是 ELISA。Lollipop 高度是样本级 ACI 减去 CTRL：红更高、蓝更低、灰不显著。亚型热图看信号停在 Pre-Neut 还是成熟粒。</p><p>全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 <code>08</code> 一致）做亚型分析。conda <strong>cytosig</strong>。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，<strong>样本级原始 p</strong>。Lollipop 样式同 arhgap35 <code>analysis.R</code> 的 <code>ggdotchart</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。<code>nrand=0</code>。</p>
+<p>CytoSig：转录组看起来像被哪些细胞因子作用过，不是 ELISA。Lollipop 是样本级 ACI 减去 CTRL。</p><p>全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 <code>08</code> 一致）做亚型分析。conda <strong>cytosig</strong>。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，<strong>样本级原始 p</strong>。Lollipop 样式同 arhgap35 <code>analysis.R</code> 的 <code>ggdotchart</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。<code>nrand=0</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, cowplot, tictoc, reticulate, ggpubr</span>

@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-把各谱系亚型拼回一份对象。后面用 annot_main（大类）和 annot_sub（亚型）。细胞集合变了所以重画 UMAP，没有重新聚类。核对大类/亚型是否分开、marker 是否对得上名字。
+合并各谱系亚型，得到 annot_main（大类）和 annot_sub（亚型），并重画官方 UMAP。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, SCpubr, ggh4x)

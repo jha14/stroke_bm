@@ -23,7 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-中性粒亚型：早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒。07–11 都用这些名字。CellTypist 常把骨髓中性粒标成单核，可以忽略。GMP 在 HSPC 那篇。
+中性粒亚型：早幼粒、Pre-Neut、成熟粒。后续组成和状态分析用这些名字。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, presto, SCpubr, scop)

@@ -2241,7 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p>通路活性（JAK-STAT、NFκB、TNFα 等），从靶基因推断，不是磷酸化检测。雄/雌激素通路已去掉。正分更活跃。Δ 热图是 ACI 中位数减去 CTRL。看中性粒谱系、每个样本一个点；细胞级星号几乎铺满，不要当病人水平的结论。</p><p>全细胞 PROGENy（decoupleR <strong>mlm</strong>），再对 <code>08</code> 中性粒谱系（GMP → 成熟 Neut）做阶段和分组。跑 mlm 前从网络里去掉 <strong>Androgen / Estrogen</strong>。mlm 只跑一次。统计、箱线、直方图用 <strong>mlm 原始 t 值</strong>；类群均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/pw_sc.html)先对每个通路跨细胞 z-score（<code>ScaleData</code>）再取均值。Wilcoxon Δ 热图仍用原始分数。转录因子见 <code>10_neut_decouple.qmd</code>。细胞级 Wilcoxon 用 BH；样本级用原始 p。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
+<p>PROGENy 通路活性（JAK-STAT、NFκB、TNFα 等），从靶基因推断，不是磷酸化检测。正分更活跃。组间看每个样本一个点。</p><p>全细胞 PROGENy（decoupleR <strong>mlm</strong>），再对 <code>08</code> 中性粒谱系（GMP → 成熟 Neut）做阶段和分组。跑 mlm 前从网络里去掉 <strong>Androgen / Estrogen</strong>。mlm 只跑一次。统计、箱线、直方图用 <strong>mlm 原始 t 值</strong>；类群均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/pw_sc.html)先对每个通路跨细胞 z-score（<code>ScaleData</code>）再取均值。Wilcoxon Δ 热图仍用原始分数。转录因子见 <code>10_neut_decouple.qmd</code>。细胞级 Wilcoxon 用 BH；样本级用原始 p。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, decoupleR, cowplot, tictoc</span>
