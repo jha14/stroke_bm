@@ -2241,11 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p><strong>这篇在故事里的位置：</strong> 中性粒扩增之后，问这些细胞是不是还沿着 <strong>GMP → 早幼粒 → Pre-Neut → 成熟 Neut</strong> 这条发育轴。GMP 并进来，是因为粒单祖细胞也在这条路上、且组成分析里 ACI 侧前体常升高。</p>
-<p><strong>怎么读：</strong> - <strong>CytoTRACE2</strong>：分数高 ≈ 更「干」、更早；成熟粒应偏低。 - <strong>Diffusion map / PHATE</strong>：另一种摊平方法，用来看是否拉成一条而不是好几团。 - <strong>Slingshot</strong>：在图上画一条（或几条）拟时间曲线。拟时间是转录组距离，<strong>不是小时数</strong>。</p>
-<p><strong>和 09–11 的关系：</strong> 本页还没有把拟时间接到通路/TF/细胞因子统计上；09–11 用的是亚型名字（有序阶段），不是 slingshot 数值。</p>
-<p>骨髓中性粒发育：GMP → Promyelocyte → Pre-Neut → 成熟 Neut。GMP 是粒单祖细胞，也是这条路上 ACI 上调的前体，所以并入轨迹，不单用 Pre-Neut / Neut。细胞集合变了，必须重新 Normalize / HVG / PCA / Harmony / UMAP。不重新聚类，亚型用 <code>06</code> 的 <code>annot_sub</code>。</p>
-<p>本脚本只做：CytoTRACE2 潜能、diffusion map、PHATE、slingshot。对照写法见 NMOSD <code>trajectory.R</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
+<p>看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。09–11 仍按亚型阶段统计，还没用这条拟时间数值。</p><p>骨髓中性粒发育：GMP → Promyelocyte → Pre-Neut → 成熟 Neut。GMP 是粒单祖细胞，也是这条路上 ACI 上调的前体，所以并入轨迹，不单用 Pre-Neut / Neut。细胞集合变了，必须重新 Normalize / HVG / PCA / Harmony / UMAP。不重新聚类，亚型用 <code>06</code> 的 <code>annot_sub</code>。</p><p>本脚本只做：CytoTRACE2 潜能、diffusion map、PHATE、slingshot。对照写法见 NMOSD <code>trajectory.R</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, harmony, tictoc, cowplot, ggh4x, ggpubr,</span>

@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Merge subtypes into final object</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p><strong>这篇在故事里的位置：</strong> 把 05 各谱系的亚型标签拼回一个「官方」对象。此后 07–11 都读这里的 <code>annot_main</code>（大类）和 <code>annot_sub</code>（亚型）。</p><p><strong>为什么重新画 UMAP：</strong> 细胞集合和标签变了，必须重新找高变基因、Harmony、UMAP。<strong>没有重新聚类</strong>，亚型名沿用 05。</p><p><strong>请看什么：</strong> 大类 / 亚型 UMAP 是否分开、标记点图是否和名字一致。短坐标轴只是美化，没有额外信息。</p><p>从 05 各 lineage 的 <code>annot_subtype</code> 拼出最终对象。Level-1 / Level-2 分别是 <code>annot_main</code> / <code>annot_sub</code>。<code>seurat_object_first_annot.qs2</code> 只提供 counts 和 QC 元数据，粗标 <code>annot</code> 留作对照，不用于后续分析。细胞集合变了，HVG / PCA / Harmony / UMAP 必须重做。不重新聚类。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>把各谱系亚型拼回一份对象。后面用 <code>annot_main</code>（大类）和 <code>annot_sub</code>（亚型）。细胞集合变了所以重画 UMAP，没有重新聚类。</p><p>从 05 各 lineage 的 <code>annot_subtype</code> 拼出最终对象。Level-1 / Level-2 分别是 <code>annot_main</code> / <code>annot_sub</code>。<code>seurat_object_first_annot.qs2</code> 只提供 counts 和 QC 元数据，粗标 <code>annot</code> 留作对照，不用于后续分析。细胞集合变了，HVG / PCA / Harmony / UMAP 必须重做。不重新聚类。</p></div>
+
 
 </div>
 

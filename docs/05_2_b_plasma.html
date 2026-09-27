@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Subtype: B / Plasma</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p><strong>这篇：</strong> B 细胞发育与记忆 B、浆细胞。</p><p><strong>给实验同事：</strong> 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 <strong>06 的 annot 点图</strong> 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。</p><p>Level-1 <code>B</code> + <code>Plasma</code>。Scale / PCA / clustering <strong>排除 IG 基因</strong>，避免克隆型 IG 主导分群。低质量 / doublet 在 subtype 按 <code>harmony_clusters_4</code> 丢掉。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>B 细胞和浆细胞亚型。PCA 去掉 IG 基因，避免克隆型把分群带着走。看本节最后的命名即可。</p><p>Level-1 <code>B</code> + <code>Plasma</code>。Scale / PCA / clustering <strong>排除 IG 基因</strong>，避免克隆型 IG 主导分群。低质量 / doublet 在 subtype 按 <code>harmony_clusters_4</code> 丢掉。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+
 
 </div>
 

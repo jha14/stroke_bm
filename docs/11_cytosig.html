@@ -2241,11 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p><strong>这篇在故事里的位置：</strong> 细胞的转录组「像刚被哪种细胞因子训练过」。这是<strong>推断的细胞因子响应</strong>，不是骨髓上清 ELISA。先看所有大类，再聚焦中性粒谱系（含 GMP 前体）。</p>
-<p><strong>怎么读热图：</strong> 与 09 相同：均值热图用跨细胞 z-score；组间热图用 ACI−CTRL。</p>
-<p><strong>怎么读 lollipop：</strong> 每个点一种细胞因子，高度 = 患者级 ACI 减 CTRL。红 = ACI 显著更高，蓝 = 显著更低，灰 = 不显著。从左到右按差值从高到低。<strong>请把这张当 11 的主图</strong>，亚型热图用来看信号是停在 Pre-Neut 还是成熟粒。</p>
-<p><strong>nrand=0：</strong> 没有做 CytoSig 自带的随机置换 p；我们用自己的 Wilcoxon 比较两组。</p>
-<p>全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 <code>08</code> 一致）做亚型分析。conda <strong>cytosig</strong>。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，<strong>样本级原始 p</strong>。Lollipop 样式同 arhgap35 <code>analysis.R</code> 的 <code>ggdotchart</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。<code>nrand=0</code>。</p>
+<p>转录组看起来像被哪些细胞因子作用过，不是 ELISA。先看各大类，再看中性粒谱系。Lollipop 高度是样本级 ACI 减去 CTRL：红更高、蓝更低、灰不显著。亚型热图用来看信号停在 Pre-Neut 还是成熟粒。</p><p>全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 <code>08</code> 一致）做亚型分析。conda <strong>cytosig</strong>。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，<strong>样本级原始 p</strong>。Lollipop 样式同 arhgap35 <code>analysis.R</code> 的 <code>ggdotchart</code>。<code>group</code> 以 <strong>CTRL</strong> 为对照。<code>nrand=0</code>。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, cowplot, tictoc, reticulate, ggpubr</span>

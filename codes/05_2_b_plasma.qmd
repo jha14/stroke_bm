@@ -23,9 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-**这篇：** B 细胞发育与记忆 B、浆细胞。
-
-**给实验同事：** 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 **06 的 annot 点图** 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。
+B 细胞和浆细胞亚型。PCA 去掉 IG 基因，避免克隆型把分群带着走。看本节最后的命名即可。
 
 
 Level-1 `B` + `Plasma`。Scale / PCA / clustering **排除 IG 基因**，避免克隆型 IG 主导分群。低质量 / doublet 在 subtype 按 `harmony_clusters_4` 丢掉。

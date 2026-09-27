@@ -6,11 +6,7 @@ format:
 ---
 
 <!-- reader-guide -->
-**这篇在故事里的位置：** 给每个 Leiden 簇起 **level-1 大类名**（HSPC、B、中性粒…）。这是后面 05 细分和 07 数细胞的基础。
-
-**请看什么：** 每个分辨率下的 marker 表 / 点图。最终采用的 cluster→细胞类型对应写在注释规则里。CellTypist（03.2）只是参考：骨髓中性粒经常被参考集标成单核，**不要直接当终分类**。
-
-**局限：** 大类边界（例如 Pre-Neut vs 成熟 Neut、GMP 算 HSPC 还是粒系）会在 05 里再掰。
+按 marker 给 cluster 起大类名（HSPC、B、中性粒等）。CellTypist 只作参考：骨髓中性粒常被标成单核。Pre-Neut、GMP 的边界在 05 再定。
 
 ```{r message=FALSE, warning=FALSE}
 pacman::p_load(Seurat, tidyverse, presto, cowplot, SCpubr, scop, qs2)

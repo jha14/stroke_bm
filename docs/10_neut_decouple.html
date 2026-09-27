@@ -2241,10 +2241,7 @@ margin-bottom: 6px !important;
 }
 </style>
 <!-- reader-guide -->
-<p><strong>这篇在故事里的位置：</strong> 只在 08 那批细胞（GMP + Pre-Neut + Neut）上问：哪些<strong>转录因子</strong>跟着发育走、两组是否不同。用 CollecTRI 网络 + ulm（每个 TF 单独回归），因为 TF 之间靶基因重叠大，不适合 PROGENy 那种多元 mlm。</p>
-<p><strong>怎么读：</strong> 正分 = 该 TF 的靶基因整体上调（推断 TF 更活）。阶段热图是 z-score 后的均值。Top TF 按「和发育阶段秩的相关」筛选，避免一千个 TF 一起报显著。</p>
-<p><strong>请看哪张：</strong> 发育轴上的 TF 热图 + 患者级组间 Δ。细胞级 Wilcoxon 仍会过于敏感。TF 活性 ≠ 该 TF 自己的 mRNA（官方教程里 PAX5 就是例子：活性图比表达图更像细胞身份）。</p>
-<p><code>08</code> 同一批细胞的 CollecTRI 转录因子活性（decoupleR <strong>ulm</strong>）。PROGENy 在 <code>09_progeny.qmd</code>。统计和箱线用 <strong>ulm 原始 t 值</strong>；均值热图按<a href="https://saezlab.github.io/decoupleR/articles/tf_sc.html">官方 scRNA 教程</a>先对每个 TF 跨细胞 z-score 再取均值。显著太多时按与阶段 Spearman |ρ| 取 top。细胞级 Wilcoxon 用 BH；样本级用原始 p。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
+<p>同一批细胞（GMP + Pre-Neut + Neut）上的转录因子活性。正分表示该 TF 的靶基因整体上调。TF 活性不等于该 TF 自己的 mRNA。看发育轴热图和每个样本一个点的组间比较。</p><p><code>08</code> 同一批细胞的 CollecTRI 转录因子活性（decoupleR <strong>ulm</strong>）。PROGENy 在 <code>09_progeny.qmd</code>。统计和箱线用 <strong>ulm 原始 t 值</strong>；均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/tf_sc.html)先对每个 TF 跨细胞 z-score 再取均值。显著太多时按与阶段 Spearman |ρ| 取 top。细胞级 Wilcoxon 用 BH；样本级用原始 p。<code>group</code> 以 <strong>CTRL</strong> 为对照。</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  Seurat, tidyverse, qs2, decoupleR, cowplot, tictoc</span>

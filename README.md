@@ -1,20 +1,18 @@
 # stroke_bm
 
-颅骨骨髓单细胞转录组（对照 CTRL 6 例 vs 急性脑梗死 ACI 5 例）。
+颅骨骨髓单细胞转录组。先有急性脑梗死（ACI）5 例，再按性别、年龄匹配选对照（CTRL）6 例。样本表和读图说明见报告首页。
 
-**请合作者先打开报告首页（中文导读）：** https://jha14.github.io/stroke_bm/
+**报告：** https://jha14.github.io/stroke_bm/
 
-科学问题：急性脑梗后颅骨骨髓中性粒细胞是否扩增；扩增之后通路、转录因子和细胞因子响应有没有变。00–06 是质控和注释，07 看组成，08–11 看中性粒状态。
-
-**怎么读 p 值和热图：** 见首页。一句话：组间结论看**患者级**（每例一个点），不要看细胞级 Wilcoxon。
+分析在问：急性脑梗后颅骨骨髓中性粒细胞有没有扩增；扩增之后通路、转录因子和细胞因子响应有没有变。00–06 质控和命名，07 组成，08–11 中性粒状态。组间结论看每个样本一个点，不要看细胞级 Wilcoxon。
 
 ## GitHub rendering
 
-- **Pages HTML**: open the link above. Colleagues can read the Quarto/notebook reports in a browser.
-- **`.ipynb`**: GitHub also previews notebooks in the file viewer.
-- **`.qmd`**: GitHub shows source only; it does not run chunks.
+- **Pages HTML**: open the link above.
+- **`.ipynb`**: GitHub previews notebooks in the file viewer.
+- **`.qmd`**: source only; GitHub does not run chunks.
 
-Source stays in `codes/`. Rendered HTML is copied to `docs/` for Pages. `data/` and `results/` are not in the repo.
+Source is in `codes/`. Rendered HTML is copied to `docs/` for Pages. `data/` and `results/` are not in the repo.
 
 ## Layout
 

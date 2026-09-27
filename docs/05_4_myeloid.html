@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Subtype: Mono / Mac / DC</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p><strong>这篇：</strong> 单核与 cDC2、pDC。本数据没有典型巨噬细胞大类。</p><p><strong>给实验同事：</strong> 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 <strong>06 的 annot 点图</strong> 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。</p><p>Level-1 <code>Mono/Mac/DC</code> + <code>pDC</code>。中性粒不放进来。低质量 cluster 按 <code>harmony_clusters_4</code> 在 round 2 丢掉。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>单核、cDC2、pDC。本数据没有典型巨噬细胞大类。看本节最后的命名即可。</p><p>Level-1 <code>Mono/Mac/DC</code> + <code>pDC</code>。中性粒不放进来。低质量 cluster 按 <code>harmony_clusters_4</code> 在 round 2 丢掉。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+
 
 </div>
 

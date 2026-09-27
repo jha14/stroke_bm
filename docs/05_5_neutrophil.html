@@ -2212,7 +2212,8 @@ vertical-align: -.125em;
 <div class="quarto-title">
 <h1 class="title">Subtype: Neutrophil</h1>
 <!-- injected-reader-guide -->
-<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p><strong>这篇在故事里的位置：</strong> 中性粒亚型命名（早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒）。<strong>请认真看这一篇的最终命名和 marker 点图</strong>，07–11 都用这些名字。</p><p>CellTypist 常把骨髓中性粒标成单核，忽略即可。GMP 在 HSPC 篇，08 再和中性粒并到一起。</p><p><strong>给实验同事：</strong> 这是某一大类内部的「再分类」。流程都是：取出该类 → 重新找高变基因/Harmony/UMAP → 去掉低质量或双细胞 → 用 marker 点图命名亚型。看 <strong>06 的 annot 点图</strong> 和本节最后的命名结果即可，中间的分辨率扫描可以当附录。</p><p>第一轮只 subset <code>Neut</code> + <code>Pre-Neut</code>，不自动并入 HSPC cluster 21。GMP / promyelocyte barcode 确认后再另存。低质量 / doublet 留给 round 2。CellTypist 常把骨髓中性粒标成单核，只作参考。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+<div class="guide" style="background:#f4f7fb;border-left:4px solid #7EB8E8;padding:10px 14px;margin:16px 0;line-height:1.5"><p>中性粒亚型：早幼粒、MMP8/MMP9 Pre-Neut、S100A12/SLC8A1/ISG15 成熟粒。后面 07–11 都用这些名字。CellTypist 常把骨髓中性粒标成单核，可以忽略。GMP 在 HSPC 那篇，08 再并进来。</p><p>第一轮只 subset <code>Neut</code> + <code>Pre-Neut</code>，不自动并入 HSPC cluster 21。GMP / promyelocyte barcode 确认后再另存。低质量 / doublet 留给 round 2。CellTypist 常把骨髓中性粒标成单核，只作参考。</p><p>Subset 后重新 <code>NormalizeData</code>：细胞集合变了，HVG / PCA / Harmony 必须重做；丢掉全局 <code>scale.data</code> 后也需要从 counts 重建 <code>data</code>。</p></div>
+
 
 </div>
 

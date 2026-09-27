@@ -23,14 +23,7 @@ ul, ol {
 </style>
 ```
 <!-- reader-guide -->
-**这篇在故事里的位置：** 中性粒扩增之后，问这些细胞是不是还沿着 **GMP → 早幼粒 → Pre-Neut → 成熟 Neut** 这条发育轴。GMP 并进来，是因为粒单祖细胞也在这条路上、且组成分析里 ACI 侧前体常升高。
-
-**怎么读：**
-- **CytoTRACE2**：分数高 ≈ 更「干」、更早；成熟粒应偏低。
-- **Diffusion map / PHATE**：另一种摊平方法，用来看是否拉成一条而不是好几团。
-- **Slingshot**：在图上画一条（或几条）拟时间曲线。拟时间是转录组距离，**不是小时数**。
-
-**和 09–11 的关系：** 本页还没有把拟时间接到通路/TF/细胞因子统计上；09–11 用的是亚型名字（有序阶段），不是 slingshot 数值。
+看 GMP → 早幼粒 → Pre-Neut → 成熟粒是否连成一条发育轴。CytoTRACE2 高分更早；Slingshot 拟时间是转录组距离，不是小时。09–11 仍按亚型阶段统计，还没用这条拟时间数值。
 
 
 骨髓中性粒发育：GMP → Promyelocyte → Pre-Neut → 成熟 Neut。GMP 是粒单祖细胞，也是这条路上 ACI 上调的前体，所以并入轨迹，不单用 Pre-Neut / Neut。细胞集合变了，必须重新 Normalize / HVG / PCA / Harmony / UMAP。不重新聚类，亚型用 `06` 的 `annot_sub`。
