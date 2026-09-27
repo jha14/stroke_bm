@@ -10,6 +10,9 @@ results/
 results_backup/
 codes_backup/
 celltypist/
+omnipathr-log/
+codes/functions.R
+codes/summary.qmd
 *.html
 !docs/*.html
 *_files/

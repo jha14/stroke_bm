@@ -1,0 +1,431 @@
+---
+title: "PROGENy pathway activity"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+全细胞 PROGENy（decoupleR **mlm**），再对 `08` 中性粒谱系（GMP → 成熟 Neut）做阶段和分组。跑 mlm 前从网络里去掉 **Androgen / Estrogen**。mlm 只跑一次。统计、箱线、直方图用 **mlm 原始 t 值**；类群均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/pw_sc.html)先对每个通路跨细胞 z-score（`ScaleData`）再取均值。Wilcoxon Δ 热图仍用原始分数。转录因子见 `10_neut_decouple.qmd`。细胞级 Wilcoxon 用 BH；样本级用原始 p。`group` 以 **CTRL** 为对照。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(
+  Seurat, tidyverse, qs2, decoupleR, cowplot, tictoc
+)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/plot_colors.R")
+source("codes/activity_helpers.R")
+summarise <- dplyr::summarise
+mutate <- dplyr::mutate
+filter <- dplyr::filter
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/progeny"
+obj_path <- "data/rdata/activity"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
+
+traj_levels <- c(
+  "GMP",
+  "Promyelocyte", "MMP8 Pre-Neut", "MMP9 Pre-Neut",
+  "S100A12 Neut", "SLC8A1 Neut", "ISG15 Neut"
+)
+traj_col <- annot_sub_col[traj_levels]
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- qs_read("data/rdata/seurat_object_final.qs2", nthreads = 10)
+stopifnot(all(c("sample", "group", "annot_main", "annot_sub") %in%
+  colnames(seurat_object[[]])))
+seurat_object$group <- factor(seurat_object$group, levels = c("CTRL", "ACI"))
+seurat_object$annot_main <- factor(
+  as.character(seurat_object$annot_main),
+  levels = names(annot_main_col)
+)
+if (length(Layers(seurat_object, search = "counts")) > 1) {
+  seurat_object <- JoinLayers(seurat_object)
+}
+if (!"data" %in% Layers(seurat_object, search = "data")) {
+  seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+}
+cell_meta <- FetchData(
+  seurat_object,
+  vars = c("sample", "group", "annot_main", "annot_sub")
+) |>
+  rownames_to_column("barcode")
+print(table(cell_meta$annot_main, cell_meta$group))
+print(table(cell_meta$annot_sub[cell_meta$annot_sub %in% traj_levels],
+  cell_meta$group[cell_meta$annot_sub %in% traj_levels]))
+```
+
+### 1. PROGENy mlm
+
+`get_progeny(top = 500)`，去掉 Androgen / Estrogen 后再 mlm（多元回归，不能事后删列）。旧缓存若仍含这两条通路会重跑。
+
+```{r message=FALSE, warning=FALSE}
+pw_drop <- c("Androgen", "Estrogen")
+progeny_qs2 <- file.path(obj_path, "progeny_all.qs2")
+reuse <- FALSE
+if (cache_ok(progeny_qs2, colnames(seurat_object))) {
+  progeny_wide <- qs_read(progeny_qs2, nthreads = 10)
+  reuse <- !any(pw_drop %in% colnames(progeny_wide))
+}
+if (!reuse) {
+  net <- decoupleR::get_progeny(organism = "human", top = 500) |>
+    dplyr::filter(!.data$source %in% pw_drop)
+  stopifnot(!any(pw_drop %in% net$source))
+  mat <- as.matrix(GetAssayData(seurat_object, assay = "RNA", layer = "data"))
+  tic("PROGENy run_mlm")
+  acts <- decoupleR::run_mlm(
+    mat = mat,
+    net = net,
+    .source = "source",
+    .target = "target",
+    .mor = "weight",
+    minsize = 5
+  )
+  toc()
+  progeny_wide <- acts_long_to_wide(acts)
+  qs_save(progeny_wide, progeny_qs2, nthreads = 10)
+}
+pw <- features_from_wide(progeny_wide)
+stopifnot(!any(pw_drop %in% pw))
+dat <- bind_meta_acts(cell_meta, progeny_wide)
+stopifnot(nrow(dat) == nrow(cell_meta))
+length(pw)
+print(pw)
+```
+
+### 2. 大类之间
+
+每个通路 Kruskal–Wallis（`annot_main`，原始 score）。热图：每个通路跨细胞 z-score 后再按大类取均值。
+
+```{r message=FALSE, warning=FALSE}
+kw_main <- kruskal_by_type(dat, pw, "annot_main")
+write_csv(kw_main, file.path(res_path, "01_kruskal_annot_main.csv"))
+print(kw_main)
+```
+
+```{r message=FALSE, warning=FALSE}
+mean_main <- mean_by_scaled(dat, pw, "annot_main")
+p_hm <- plot_heatmap_mean(mean_main, pw, row_col = "annot_main") +
+  scale_x_discrete(limits = names(annot_main_col))
+ggsave(file.path(res_path, "01_heatmap_annot_main.pdf"), p_hm, width = 8, height = 6, dpi = 600)
+p_hm
+```
+
+```{r message=FALSE, warning=FALSE}
+long_pw <- dat |>
+  dplyr::select(barcode, annot_main, dplyr::all_of(pw)) |>
+  tidyr::pivot_longer(dplyr::all_of(pw), names_to = "pathway", values_to = "score")
+long_pw$pathway <- factor(long_pw$pathway, levels = pw)
+long_pw$annot_main <- factor(long_pw$annot_main, levels = names(annot_main_col))
+p_box <- ggplot(long_pw, aes(x = annot_main, y = score, fill = annot_main)) +
+  geom_boxplot(outlier.size = 0.15, width = 0.7) +
+  facet_wrap(~pathway, scales = "free_y", ncol = 4) +
+  scale_fill_manual(values = annot_main_col) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8)
+  ) +
+  xlab(NULL) +
+  ylab("PROGENy mlm")
+ggsave(file.path(res_path, "01_box_annot_main.pdf"), p_box, width = 14, height = 10, dpi = 600)
+p_box
+```
+
+### 3. CTRL vs ACI（每个大类）
+
+细胞级 Wilcoxon + BH；样本中位数（该大类内每样本至少 `r min_cells_sample` 个细胞）用原始 p。
+
+```{r message=FALSE, warning=FALSE}
+cell_main <- cell_group_tests(dat, pw, strata_col = "annot_main") |>
+  add_fdr() |>
+  dplyr::mutate(annot_main = factor(.data$stratum, levels = names(annot_main_col))) |>
+  dplyr::arrange(.data$annot_main, .data$padj)
+write_csv(cell_main, file.path(res_path, "02_wilcox_cell_annot_main.csv"))
+
+med_main <- sample_medians(dat, pw, extra_group = "annot_main")
+sample_main <- sample_group_tests(med_main, pw, strata_col = "annot_main") |>
+  add_stars() |>
+  dplyr::mutate(annot_main = factor(.data$stratum, levels = names(annot_main_col))) |>
+  dplyr::arrange(.data$annot_main, .data$p)
+write_csv(sample_main, file.path(res_path, "02_wilcox_sample_annot_main.csv"))
+
+print(dplyr::filter(sample_main, .data$p < 0.05))
+```
+
+```{r message=FALSE, warning=FALSE}
+hm_delta <- sample_main |>
+  dplyr::mutate(
+    feature = factor(.data$feature, levels = pw),
+    annot_main = factor(.data$annot_main, levels = names(annot_main_col))
+  )
+p_d <- ggplot(hm_delta, aes(x = annot_main, y = feature, fill = delta_aci_minus_ctrl)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 3) +
+  scale_fill_activity(hm_delta$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Sample-level median: ACI − CTRL (star = Wilcoxon p)")
+ggsave(file.path(res_path, "02_heatmap_sample_delta.pdf"), p_d, width = 8, height = 6, dpi = 600)
+p_d
+```
+
+```{r message=FALSE, warning=FALSE}
+hm_cell <- cell_main |>
+  dplyr::mutate(
+    feature = factor(.data$feature, levels = pw),
+    annot_main = factor(.data$annot_main, levels = names(annot_main_col))
+  )
+p_c <- ggplot(hm_cell, aes(x = annot_main, y = feature, fill = delta_aci_minus_ctrl)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 3) +
+  scale_fill_activity(hm_cell$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Cell-level: ACI − CTRL (star = BH on Wilcoxon)")
+ggsave(file.path(res_path, "02_heatmap_cell_delta.pdf"), p_c, width = 8, height = 6, dpi = 600)
+p_c
+```
+
+样本级箱线：画样本级 p < 0.05 的通路；若没有则画 |Δ| 最大的 4 个。
+
+```{r message=FALSE, warning=FALSE}
+sig_pw <- unique(as.character(sample_main$feature[sample_main$p < 0.05]))
+if (length(sig_pw) == 0) {
+  sig_pw <- sample_main |>
+    dplyr::group_by(feature) |>
+    dplyr::summarise(m = max(abs(delta_aci_minus_ctrl), na.rm = TRUE), .groups = "drop") |>
+    dplyr::slice_max(.data$m, n = 4) |>
+    dplyr::pull(feature)
+}
+long_med <- med_main |>
+  tidyr::pivot_longer(dplyr::all_of(pw), names_to = "pathway", values_to = "score") |>
+  dplyr::filter(.data$pathway %in% sig_pw)
+long_med$annot_main <- factor(long_med$annot_main, levels = names(annot_main_col))
+long_med$group <- factor(long_med$group, levels = c("CTRL", "ACI"))
+p_s <- ggplot(long_med, aes(x = annot_main, y = score, fill = group)) +
+  geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(0.8)) +
+  geom_point(
+    position = position_dodge(0.8), size = 1.4, alpha = 0.8,
+    aes(group = group)
+  ) +
+  facet_wrap(~pathway, scales = "free_y") +
+  scale_fill_manual(values = group_col) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab("Sample median PROGENy")
+ggsave(file.path(res_path, "02_box_sample_sig.pdf"), p_s, width = 12, height = 8, dpi = 600)
+p_s
+```
+
+细胞级 / 样本级直方图：每个大类 × 通路，CTRL vs ACI。
+
+```{r message=FALSE, warning=FALSE}
+long_cell_main <- dat |>
+  dplyr::select(annot_main, group, dplyr::all_of(pw)) |>
+  tidyr::pivot_longer(dplyr::all_of(pw), names_to = "pathway", values_to = "score") |>
+  dplyr::mutate(
+    annot_main = factor(.data$annot_main, levels = names(annot_main_col)),
+    pathway = factor(.data$pathway, levels = pw),
+    group = factor(.data$group, levels = c("CTRL", "ACI"))
+  )
+p_hist_cell_main <- plot_score_hist(long_cell_main, "annot_main", bins = 40) +
+  ggtitle("Cell-level")
+ggsave(
+  file.path(res_path, "02_hist_cell_annot_main.pdf"),
+  p_hist_cell_main, width = 22, height = 16, dpi = 600
+)
+p_hist_cell_main
+```
+
+```{r message=FALSE, warning=FALSE}
+long_med_main <- med_main |>
+  tidyr::pivot_longer(dplyr::all_of(pw), names_to = "pathway", values_to = "score") |>
+  dplyr::mutate(
+    annot_main = factor(.data$annot_main, levels = names(annot_main_col)),
+    pathway = factor(.data$pathway, levels = pw),
+    group = factor(.data$group, levels = c("CTRL", "ACI"))
+  )
+p_hist_med_main <- plot_score_hist(long_med_main, "annot_main", bins = 10) +
+  ggtitle("Patient-level (sample median)")
+ggsave(
+  file.path(res_path, "02_hist_sample_annot_main.pdf"),
+  p_hist_med_main, width = 22, height = 16, dpi = 600
+)
+p_hist_med_main
+```
+
+### 4. 中性粒谱系：发育阶段
+
+复用全细胞 mlm，取 GMP + Pre-Neut + Neut。阶段秩 Spearman + Kruskal 用原始 score。热图在谱系细胞内 z-score 再取均值。
+
+```{r message=FALSE, warning=FALSE}
+dat_neut <- dat |>
+  dplyr::filter(as.character(.data$annot_sub) %in% traj_levels) |>
+  dplyr::mutate(
+    annot_sub = factor(as.character(.data$annot_sub), levels = traj_levels)
+  )
+stopifnot(nrow(dat_neut) > 0)
+pw_stage <- stage_assoc(dat_neut, pw, "annot_sub")
+write_csv(pw_stage, file.path(res_path, "03_neut_stage.csv"))
+print(pw_stage)
+
+mean_pw <- mean_by_scaled(dat_neut, pw, "annot_sub")
+p_hm_pw <- plot_heatmap_mean(mean_pw, pw, row_col = "annot_sub") +
+  scale_x_discrete(limits = traj_levels)
+ggsave(file.path(res_path, "03_neut_heatmap_stage.pdf"), p_hm_pw, width = 8, height = 6, dpi = 600)
+p_hm_pw
+```
+
+```{r message=FALSE, warning=FALSE}
+long_n <- dat_neut |>
+  dplyr::select(annot_sub, dplyr::all_of(pw)) |>
+  tidyr::pivot_longer(dplyr::all_of(pw), names_to = "pathway", values_to = "score")
+long_n$annot_sub <- factor(long_n$annot_sub, levels = traj_levels)
+p_box_n <- ggplot(long_n, aes(x = annot_sub, y = score, fill = annot_sub)) +
+  geom_boxplot(outlier.size = 0.15, width = 0.7) +
+  facet_wrap(~pathway, scales = "free_y", ncol = 4) +
+  scale_fill_manual(values = traj_col) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8)
+  ) +
+  xlab(NULL) +
+  ylab("PROGENy mlm")
+ggsave(file.path(res_path, "03_neut_box_stage.pdf"), p_box_n, width = 14, height = 10, dpi = 600)
+p_box_n
+```
+
+### 5. 中性粒谱系：CTRL vs ACI
+
+谱系合计 + 每个 `annot_sub`。样本级原始 p。
+
+```{r message=FALSE, warning=FALSE}
+pw_cell_all <- add_fdr(cell_group_tests(dat_neut, pw))
+pw_med_all <- sample_medians(dat_neut, pw)
+pw_sample_all <- add_stars(sample_group_tests(pw_med_all, pw))
+write_csv(pw_cell_all, file.path(res_path, "04_neut_wilcox_cell_overall.csv"))
+write_csv(pw_sample_all, file.path(res_path, "04_neut_wilcox_sample_overall.csv"))
+
+pw_cell_sub <- add_fdr(cell_group_tests(dat_neut, pw, strata_col = "annot_sub")) |>
+  dplyr::mutate(annot_sub = factor(.data$stratum, levels = traj_levels))
+pw_med_sub <- sample_medians(dat_neut, pw, extra_group = "annot_sub")
+pw_sample_sub <- add_stars(sample_group_tests(pw_med_sub, pw, strata_col = "annot_sub")) |>
+  dplyr::mutate(annot_sub = factor(.data$stratum, levels = traj_levels))
+write_csv(pw_cell_sub, file.path(res_path, "04_neut_wilcox_cell_subtype.csv"))
+write_csv(pw_sample_sub, file.path(res_path, "04_neut_wilcox_sample_subtype.csv"))
+print(dplyr::filter(pw_sample_all, .data$p < 0.05))
+print(dplyr::filter(pw_sample_sub, .data$p < 0.05))
+```
+
+细胞级 / 样本级直方图：每个中性粒亚型 × 通路。
+
+```{r message=FALSE, warning=FALSE}
+long_cell_neut <- dat_neut |>
+  dplyr::select(annot_sub, group, dplyr::all_of(pw)) |>
+  tidyr::pivot_longer(dplyr::all_of(pw), names_to = "pathway", values_to = "score") |>
+  dplyr::mutate(
+    annot_sub = factor(.data$annot_sub, levels = traj_levels),
+    pathway = factor(.data$pathway, levels = pw),
+    group = factor(.data$group, levels = c("CTRL", "ACI"))
+  )
+p_hist_cell_neut <- plot_score_hist(long_cell_neut, "annot_sub", bins = 40) +
+  ggtitle("Cell-level")
+ggsave(
+  file.path(res_path, "04_neut_hist_cell_subtype.pdf"),
+  p_hist_cell_neut, width = 22, height = 12, dpi = 600
+)
+p_hist_cell_neut
+```
+
+```{r message=FALSE, warning=FALSE}
+long_med_neut <- pw_med_sub |>
+  tidyr::pivot_longer(dplyr::all_of(pw), names_to = "pathway", values_to = "score") |>
+  dplyr::mutate(
+    annot_sub = factor(.data$annot_sub, levels = traj_levels),
+    pathway = factor(.data$pathway, levels = pw),
+    group = factor(.data$group, levels = c("CTRL", "ACI"))
+  )
+p_hist_med_neut <- plot_score_hist(long_med_neut, "annot_sub", bins = 10) +
+  ggtitle("Patient-level (sample median)")
+ggsave(
+  file.path(res_path, "04_neut_hist_sample_subtype.pdf"),
+  p_hist_med_neut, width = 22, height = 12, dpi = 600
+)
+p_hist_med_neut
+```
+
+```{r message=FALSE, warning=FALSE}
+p_pw_d <- ggplot(
+  dplyr::mutate(pw_sample_sub, feature = factor(feature, levels = pw)),
+  aes(x = annot_sub, y = feature, fill = delta_aci_minus_ctrl)
+) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 2.8) +
+  scale_fill_activity(pw_sample_sub$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Neut lineage sample-level ACI − CTRL (Wilcoxon p)")
+ggsave(file.path(res_path, "04_neut_heatmap_sample_delta.pdf"), p_pw_d, width = 8, height = 6, dpi = 600)
+p_pw_d
+```
+
+```{r message=FALSE, warning=FALSE}
+mean_pw_g <- mean_by_scaled(dat_neut, pw, c("annot_sub", "group"))
+long_g <- tidyr::pivot_longer(
+  mean_pw_g, dplyr::all_of(pw), names_to = "feature", values_to = "mean"
+) |>
+  dplyr::mutate(
+    annot_sub = factor(annot_sub, levels = traj_levels),
+    group = factor(group, levels = c("CTRL", "ACI"))
+  )
+p_pw_g <- ggplot(long_g, aes(x = annot_sub, y = feature, fill = mean)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  facet_wrap(~group, ncol = 2) +
+  scale_fill_activity(long_g$mean) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9)) +
+  xlab(NULL) +
+  ylab(NULL)
+ggsave(file.path(res_path, "04_neut_heatmap_stage_group.pdf"), p_pw_g, width = 12, height = 6, dpi = 600)
+p_pw_g
+```
+
+```{r}
+sessionInfo()
+```

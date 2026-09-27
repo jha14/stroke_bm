@@ -1,0 +1,219 @@
+---
+title: "Neutrophil lineage TF activity"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+`08` 同一批细胞的 CollecTRI 转录因子活性（decoupleR **ulm**）。PROGENy 在 `09_progeny.qmd`。统计和箱线用 **ulm 原始 t 值**；均值热图按[官方 scRNA 教程](https://saezlab.github.io/decoupleR/articles/tf_sc.html)先对每个 TF 跨细胞 z-score 再取均值。显著太多时按与阶段 Spearman |ρ| 取 top。细胞级 Wilcoxon 用 BH；样本级用原始 p。`group` 以 **CTRL** 为对照。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(
+  Seurat, tidyverse, qs2, decoupleR, cowplot, tictoc
+)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/plot_colors.R")
+source("codes/activity_helpers.R")
+summarise <- dplyr::summarise
+mutate <- dplyr::mutate
+filter <- dplyr::filter
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/neut_tf"
+obj_path <- "data/rdata/activity"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
+
+n_tf_top <- 20
+traj_levels <- c(
+  "GMP",
+  "Promyelocyte", "MMP8 Pre-Neut", "MMP9 Pre-Neut",
+  "S100A12 Neut", "SLC8A1 Neut", "ISG15 Neut"
+)
+traj_col <- annot_sub_col[traj_levels]
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- qs_read("data/rdata/seurat_object_final.qs2", nthreads = 10)
+stopifnot(all(c("sample", "group", "annot_sub") %in% colnames(seurat_object[[]])))
+keep <- as.character(seurat_object$annot_sub) %in% traj_levels
+seurat_object <- seurat_object[, keep]
+seurat_object$group <- factor(seurat_object$group, levels = c("CTRL", "ACI"))
+seurat_object$annot_sub <- factor(
+  as.character(seurat_object$annot_sub),
+  levels = traj_levels
+)
+if (length(Layers(seurat_object, search = "counts")) > 1) {
+  seurat_object <- JoinLayers(seurat_object)
+}
+if (!"data" %in% Layers(seurat_object, search = "data")) {
+  seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+}
+cell_meta <- FetchData(
+  seurat_object,
+  vars = c("sample", "group", "annot_sub")
+) |>
+  rownames_to_column("barcode")
+print(table(cell_meta$annot_sub, cell_meta$group))
+```
+
+### 1. CollecTRI ulm
+
+```{r message=FALSE, warning=FALSE}
+tf_qs2 <- file.path(obj_path, "collectri_neut.qs2")
+if (cache_ok(tf_qs2, colnames(seurat_object))) {
+  tf_wide <- qs_read(tf_qs2, nthreads = 10)
+} else {
+  net_tf <- decoupleR::get_collectri(organism = "human", split_complexes = FALSE)
+  mat <- as.matrix(GetAssayData(seurat_object, assay = "RNA", layer = "data"))
+  tic("neut CollecTRI run_ulm")
+  acts_tf <- decoupleR::run_ulm(
+    mat = mat,
+    net = net_tf,
+    .source = "source",
+    .target = "target",
+    .mor = "mor",
+    minsize = 5
+  )
+  toc()
+  tf_wide <- acts_long_to_wide(acts_tf)
+  qs_save(tf_wide, tf_qs2, nthreads = 10)
+}
+tfs <- features_from_wide(tf_wide)
+dat_tf <- bind_meta_acts(cell_meta, tf_wide)
+length(tfs)
+```
+
+### 2. 发育阶段 → top TF
+
+在 Kruskal BH < 0.05 里按 |ρ| 取 `r n_tf_top`；不够就按 |ρ| 硬取。
+
+```{r message=FALSE, warning=FALSE}
+tf_stage <- stage_assoc(dat_tf, tfs, "annot_sub")
+write_csv(tf_stage, file.path(res_path, "01_tf_stage.csv"))
+tf_keep <- tf_stage |>
+  dplyr::filter(.data$padj_kruskal < 0.05) |>
+  dplyr::slice_max(order_by = abs(.data$rho), n = n_tf_top, with_ties = FALSE)
+if (nrow(tf_keep) < n_tf_top) {
+  tf_keep <- tf_stage |>
+    dplyr::slice_max(order_by = abs(.data$rho), n = n_tf_top, with_ties = FALSE)
+}
+tf_top <- tf_keep$feature
+print(tf_keep)
+
+mean_tf <- mean_by_scaled(dat_tf, tf_top, "annot_sub")
+p_hm_tf <- plot_heatmap_mean(mean_tf, tf_top, row_col = "annot_sub") +
+  scale_x_discrete(limits = traj_levels)
+ggsave(file.path(res_path, "01_tf_heatmap_stage.pdf"), p_hm_tf, width = 8, height = 7, dpi = 600)
+p_hm_tf
+```
+
+```{r message=FALSE, warning=FALSE}
+long_tf <- dat_tf |>
+  dplyr::select(annot_sub, dplyr::all_of(tf_top)) |>
+  tidyr::pivot_longer(dplyr::all_of(tf_top), names_to = "tf", values_to = "score")
+long_tf$tf <- factor(long_tf$tf, levels = tf_top)
+long_tf$annot_sub <- factor(long_tf$annot_sub, levels = traj_levels)
+p_box_tf <- ggplot(long_tf, aes(x = annot_sub, y = score, fill = annot_sub)) +
+  geom_boxplot(outlier.size = 0.12, width = 0.7) +
+  facet_wrap(~tf, scales = "free_y", ncol = 5) +
+  scale_fill_manual(values = traj_col) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7)
+  ) +
+  xlab(NULL) +
+  ylab("CollecTRI ulm")
+ggsave(file.path(res_path, "01_tf_box_stage.pdf"), p_box_tf, width = 14, height = 10, dpi = 600)
+```
+
+### 3. CTRL vs ACI（top TF）
+
+只对发育相关 top TF 做分组检验。样本级原始 p。
+
+```{r message=FALSE, warning=FALSE}
+tf_cell_all <- add_fdr(cell_group_tests(dat_tf, tf_top))
+tf_med_all <- sample_medians(dat_tf, tf_top)
+tf_sample_all <- add_stars(sample_group_tests(tf_med_all, tf_top))
+write_csv(tf_cell_all, file.path(res_path, "02_tf_wilcox_cell_overall.csv"))
+write_csv(tf_sample_all, file.path(res_path, "02_tf_wilcox_sample_overall.csv"))
+
+tf_cell_sub <- add_fdr(cell_group_tests(dat_tf, tf_top, strata_col = "annot_sub")) |>
+  dplyr::mutate(annot_sub = factor(.data$stratum, levels = traj_levels))
+tf_med_sub <- sample_medians(dat_tf, tf_top, extra_group = "annot_sub")
+tf_sample_sub <- add_stars(sample_group_tests(tf_med_sub, tf_top, strata_col = "annot_sub")) |>
+  dplyr::mutate(annot_sub = factor(.data$stratum, levels = traj_levels))
+write_csv(tf_cell_sub, file.path(res_path, "02_tf_wilcox_cell_subtype.csv"))
+write_csv(tf_sample_sub, file.path(res_path, "02_tf_wilcox_sample_subtype.csv"))
+print(tf_sample_all)
+print(dplyr::filter(tf_sample_sub, .data$p < 0.05))
+```
+
+```{r message=FALSE, warning=FALSE}
+p_tf_d <- ggplot(
+  dplyr::mutate(tf_sample_sub, feature = factor(feature, levels = tf_top)),
+  aes(x = annot_sub, y = feature, fill = delta_aci_minus_ctrl)
+) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 2.6) +
+  scale_fill_activity(tf_sample_sub$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Top TF sample-level ACI − CTRL (Wilcoxon p)")
+ggsave(file.path(res_path, "02_tf_heatmap_sample_delta.pdf"), p_tf_d, width = 8, height = 7, dpi = 600)
+p_tf_d
+```
+
+```{r message=FALSE, warning=FALSE}
+mean_tf_g <- mean_by_scaled(dat_tf, tf_top, c("annot_sub", "group"))
+long_g <- tidyr::pivot_longer(
+  mean_tf_g, dplyr::all_of(tf_top), names_to = "feature", values_to = "mean"
+) |>
+  dplyr::mutate(
+    feature = factor(feature, levels = tf_top),
+    annot_sub = factor(annot_sub, levels = traj_levels),
+    group = factor(group, levels = c("CTRL", "ACI"))
+  )
+p_tf_g <- ggplot(long_g, aes(x = annot_sub, y = feature, fill = mean)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  facet_wrap(~group, ncol = 2) +
+  scale_fill_activity(long_g$mean) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9)) +
+  xlab(NULL) +
+  ylab(NULL)
+ggsave(file.path(res_path, "02_tf_heatmap_stage_group.pdf"), p_tf_g, width = 12, height = 7, dpi = 600)
+p_tf_g
+```
+
+```{r}
+sessionInfo()
+```

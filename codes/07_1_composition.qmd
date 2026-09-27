@@ -33,7 +33,6 @@ pacman::p_load(
 )
 knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
 setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
-source("codes/functions.R")
 source("codes/plot_colors.R")
 ```
 

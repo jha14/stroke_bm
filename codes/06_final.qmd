@@ -29,7 +29,6 @@ ul, ol {
 pacman::p_load(Seurat, tidyverse, qs2, harmony, tictoc, cowplot, SCpubr, ggh4x)
 knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
 setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
-source("codes/functions.R")
 source("codes/plot_colors.R")
 ```
 
@@ -286,7 +285,7 @@ seurat_object <- RunUMAP(
 
 ### 5. Annotation UMAPs
 
-短坐标轴同 `summary.qmd`。颜色来自 `codes/plot_colors.R`。
+短坐标轴和颜色来自 `codes/plot_colors.R`。
 
 ```{r message=FALSE, warning=FALSE}
 plot_umap_short(

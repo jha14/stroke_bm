@@ -32,8 +32,11 @@ Source stays in `codes/`. Rendered HTML is copied to `docs/` for Pages. `data/` 
 | `codes/07_1_composition.qmd` | Sample proportions, Wilcoxon, miloR |
 | `codes/07_2_sccoda.ipynb` | scCODA / tascCODA (conda `pertpy`) |
 | `codes/08_neut_trajectory.qmd` | GMP + neutrophil CytoTRACE2, DM, PHATE, slingshot |
+| `codes/09_progeny.qmd` | PROGENy mlm (all cells + neutrophil lineage) |
+| `codes/10_neut_decouple.qmd` | Neutrophil CollecTRI ulm |
+| `codes/11_cytosig.qmd` | CytoSig (conda `cytosig`) |
 | `codes/plot_colors.R` | Shared palettes |
-| `codes/functions.R` | Shared helpers |
+| `codes/activity_helpers.R` | Activity stats / heatmap helpers |
 
 `05_*` numbering follows `annot_main_col` in `plot_colors.R`.
 

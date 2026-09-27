@@ -1,0 +1,344 @@
+---
+title: "CytoSig cytokine activity"
+format:
+  html:
+    embed-resources: true
+---
+
+```{=html}
+<style>
+h1, h2, h3, h4 {
+  margin-top: 45px !important;
+  margin-bottom: 0px !important;
+}
+
+p {
+  margin-top: 10px !important;
+  margin-bottom: 0px !important;
+}
+
+ul, ol {
+  margin-bottom: 6px !important;
+}
+</style>
+```
+
+全细胞 CytoSig ridge，再对中性粒谱系（GMP + Pre-Neut + Neut，与 `08` 一致）做亚型分析。conda **cytosig**。均值热图：每个细胞因子跨细胞 z-score 再取均值。组间 Wilcoxon：细胞级 BH，**样本级原始 p**。Lollipop 样式同 arhgap35 `analysis.R` 的 `ggdotchart`。`group` 以 **CTRL** 为对照。`nrand=0`。
+
+```{r message=FALSE, warning=FALSE}
+pacman::p_load(
+  Seurat, tidyverse, qs2, cowplot, tictoc, reticulate, ggpubr
+)
+knitr::opts_knit$set(root.dir = "/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+setwd("/home/han/Desktop/guoqiang/stroke_bm/stroke_bm_Rproj")
+source("codes/plot_colors.R")
+source("codes/activity_helpers.R")
+summarise <- dplyr::summarise
+mutate <- dplyr::mutate
+filter <- dplyr::filter
+Sys.setenv(RETICULATE_PYTHON = "/home/han/anaconda3/envs/cytosig/bin/python")
+```
+
+```{r message=FALSE, warning=FALSE}
+res_path <- "results/cytosig"
+obj_path <- "data/rdata/activity"
+if (dir.exists(res_path)) {
+  old_res <- list.files(res_path, full.names = TRUE)
+  if (length(old_res) > 0) unlink(old_res, recursive = TRUE)
+} else {
+  dir.create(res_path, recursive = TRUE)
+}
+if (!dir.exists(obj_path)) dir.create(obj_path, recursive = TRUE)
+
+nrand <- 0
+alpha_ridge <- 1e4
+traj_levels <- c(
+  "GMP",
+  "Promyelocyte", "MMP8 Pre-Neut", "MMP9 Pre-Neut",
+  "S100A12 Neut", "SLC8A1 Neut", "ISG15 Neut"
+)
+```
+
+```{r message=FALSE, warning=FALSE}
+seurat_object <- qs_read("data/rdata/seurat_object_final.qs2", nthreads = 10)
+stopifnot(all(c("sample", "group", "annot_main", "annot_sub") %in%
+  colnames(seurat_object[[]])))
+seurat_object$group <- factor(seurat_object$group, levels = c("CTRL", "ACI"))
+seurat_object$annot_main <- factor(
+  as.character(seurat_object$annot_main),
+  levels = names(annot_main_col)
+)
+if (length(Layers(seurat_object, search = "counts")) > 1) {
+  seurat_object <- JoinLayers(seurat_object)
+}
+if (!"data" %in% Layers(seurat_object, search = "data")) {
+  seurat_object <- NormalizeData(seurat_object, verbose = TRUE)
+}
+cell_meta <- FetchData(
+  seurat_object,
+  vars = c("sample", "group", "annot_main", "annot_sub")
+) |>
+  rownames_to_column("barcode")
+print(table(cell_meta$annot_main, cell_meta$group))
+```
+
+### 1. CytoSig ridge（全细胞）
+
+`X` = signature.centroid，`Y` = log-normalized 表达。活性取 ridge z-score。barcode 与 `cytosig_all.qs2` 一致则跳过。
+
+```{r message=FALSE, warning=FALSE}
+cs_qs2 <- file.path(obj_path, "cytosig_all.qs2")
+if (cache_ok(cs_qs2, colnames(seurat_object))) {
+  cs_wide <- qs_read(cs_qs2, nthreads = 10)
+} else {
+  use_python("/home/han/anaconda3/envs/cytosig/bin/python", required = TRUE)
+  pd <- import("pandas", convert = FALSE)
+  cs <- import("CytoSig.Util", convert = FALSE)
+  sig <- pd$read_csv(py_to_r(cs$find_signature_path()), sep = "\t", index_col = 0L)
+  sig_genes <- as.character(py_to_r(sig$index$tolist()))
+  expr_genes <- intersect(rownames(seurat_object), sig_genes)
+  stopifnot(length(expr_genes) >= 10)
+  mat <- as.matrix(
+    GetAssayData(seurat_object, assay = "RNA", layer = "data")[expr_genes, ]
+  )
+  py$expr <- r_to_py(mat)
+  py$gene_names <- r_to_py(as.list(rownames(mat)))
+  py$cell_names <- r_to_py(as.list(colnames(mat)))
+  py$alpha_ridge <- alpha_ridge
+  py$nrand <- as.integer(nrand)
+  tic("CytoSig ridge_significance_test")
+  py_run_string("
+import pandas as pd
+from CytoSig.Util import ridge_significance_test, find_signature_path
+Y = pd.DataFrame(expr, index=list(gene_names), columns=list(cell_names))
+sig = pd.read_csv(find_signature_path(), sep='\\t', index_col=0)
+res = ridge_significance_test(
+    sig, Y,
+    alpha=alpha_ridge,
+    alternative='two-sided',
+    nrand=int(nrand),
+    cnt_thres=10,
+    flag_normalize=True,
+    flag_const=False,
+    verbose=True
+)
+zscore = res[2]
+")
+  toc()
+  z <- py_to_r(py$zscore)
+  cs_wide <- as.data.frame(t(as.matrix(z))) |>
+    rownames_to_column("barcode")
+  qs_save(cs_wide, cs_qs2, nthreads = 10)
+}
+ck <- features_from_wide(cs_wide)
+dat <- bind_meta_acts(cell_meta, cs_wide)
+stopifnot(nrow(dat) == nrow(cell_meta))
+length(ck)
+print(ck)
+```
+
+### 2. 细胞大类：活性热图
+
+每个细胞因子跨全部细胞 z-score，再按 `annot_main` 取均值。
+
+```{r message=FALSE, warning=FALSE}
+mean_main <- mean_by_scaled(dat, ck, "annot_main")
+p_hm_main <- plot_heatmap_mean(mean_main, ck, row_col = "annot_main") +
+  scale_x_discrete(limits = names(annot_main_col))
+ggsave(file.path(res_path, "01_heatmap_annot_main.pdf"), p_hm_main, width = 8, height = 10, dpi = 600)
+p_hm_main
+```
+
+```{r message=FALSE, warning=FALSE}
+mean_main_g <- mean_by_scaled(dat, ck, c("annot_main", "group"))
+long_mg <- tidyr::pivot_longer(
+  mean_main_g, dplyr::all_of(ck), names_to = "feature", values_to = "mean"
+) |>
+  dplyr::mutate(
+    annot_main = factor(annot_main, levels = names(annot_main_col)),
+    group = factor(group, levels = c("CTRL", "ACI"))
+  )
+p_hm_main_g <- ggplot(long_mg, aes(x = annot_main, y = feature, fill = mean)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  facet_wrap(~group, ncol = 2) +
+  scale_fill_activity(long_mg$mean) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9)) +
+  xlab(NULL) +
+  ylab(NULL)
+ggsave(file.path(res_path, "01_heatmap_annot_main_group.pdf"), p_hm_main_g, width = 12, height = 10, dpi = 600)
+p_hm_main_g
+```
+
+### 3. 细胞大类：CTRL vs ACI
+
+```{r message=FALSE, warning=FALSE}
+ck_cell_main <- add_fdr(cell_group_tests(dat, ck, strata_col = "annot_main")) |>
+  dplyr::mutate(annot_main = factor(.data$stratum, levels = names(annot_main_col)))
+ck_med_main <- sample_medians(dat, ck, extra_group = "annot_main")
+ck_sample_main <- add_stars(sample_group_tests(ck_med_main, ck, strata_col = "annot_main")) |>
+  dplyr::mutate(annot_main = factor(.data$stratum, levels = names(annot_main_col)))
+write_csv(ck_cell_main, file.path(res_path, "02_wilcox_cell_annot_main.csv"))
+write_csv(ck_sample_main, file.path(res_path, "02_wilcox_sample_annot_main.csv"))
+print(dplyr::filter(ck_sample_main, .data$p < 0.05))
+```
+
+```{r message=FALSE, warning=FALSE}
+p_d_s <- ggplot(
+  dplyr::mutate(ck_sample_main, feature = factor(feature, levels = ck)),
+  aes(x = annot_main, y = feature, fill = delta_aci_minus_ctrl)
+) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 2.2) +
+  scale_fill_activity(ck_sample_main$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Sample-level ACI − CTRL (Wilcoxon p)")
+ggsave(file.path(res_path, "02_heatmap_sample_annot_main.pdf"), p_d_s, width = 8, height = 10, dpi = 600)
+p_d_s
+```
+
+```{r message=FALSE, warning=FALSE}
+p_d_c <- ggplot(
+  dplyr::mutate(ck_cell_main, feature = factor(feature, levels = ck)),
+  aes(x = annot_main, y = feature, fill = delta_aci_minus_ctrl)
+) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 2.2) +
+  scale_fill_activity(ck_cell_main$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Cell-level ACI − CTRL (BH)")
+ggsave(file.path(res_path, "02_heatmap_cell_annot_main.pdf"), p_d_c, width = 8, height = 10, dpi = 600)
+p_d_c
+```
+
+### 4. 中性粒谱系：亚型活性热图
+
+复用全细胞 ridge，取 GMP + Pre-Neut + Neut。
+
+```{r message=FALSE, warning=FALSE}
+dat_neut <- dat |>
+  dplyr::filter(as.character(.data$annot_sub) %in% traj_levels) |>
+  dplyr::mutate(
+    annot_sub = factor(as.character(.data$annot_sub), levels = traj_levels)
+  )
+stopifnot(nrow(dat_neut) > 0)
+print(table(dat_neut$annot_sub, dat_neut$group))
+
+mean_sub <- mean_by_scaled(dat_neut, ck, "annot_sub")
+p_hm_sub <- plot_heatmap_mean(mean_sub, ck, row_col = "annot_sub") +
+  scale_x_discrete(limits = traj_levels)
+ggsave(file.path(res_path, "03_neut_heatmap_subtype.pdf"), p_hm_sub, width = 8, height = 10, dpi = 600)
+p_hm_sub
+```
+
+```{r message=FALSE, warning=FALSE}
+mean_sub_g <- mean_by_scaled(dat_neut, ck, c("annot_sub", "group"))
+long_sg <- tidyr::pivot_longer(
+  mean_sub_g, dplyr::all_of(ck), names_to = "feature", values_to = "mean"
+) |>
+  dplyr::mutate(
+    annot_sub = factor(annot_sub, levels = traj_levels),
+    group = factor(group, levels = c("CTRL", "ACI"))
+  )
+p_hm_sub_g <- ggplot(long_sg, aes(x = annot_sub, y = feature, fill = mean)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  facet_wrap(~group, ncol = 2) +
+  scale_fill_activity(long_sg$mean) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9)) +
+  xlab(NULL) +
+  ylab(NULL)
+ggsave(file.path(res_path, "03_neut_heatmap_subtype_group.pdf"), p_hm_sub_g, width = 12, height = 10, dpi = 600)
+p_hm_sub_g
+```
+
+### 5. 中性粒谱系总体：lollipop
+
+谱系细胞合计，样本级原始 p（主图），细胞级 BH 作对照。按 ACI−CTRL 从高到低。
+
+```{r message=FALSE, warning=FALSE}
+ck_cell_lineage <- add_fdr(cell_group_tests(dat_neut, ck))
+ck_med_lineage <- sample_medians(dat_neut, ck)
+ck_sample_lineage <- add_stars(sample_group_tests(ck_med_lineage, ck))
+write_csv(ck_cell_lineage, file.path(res_path, "04_neut_wilcox_cell_lineage.csv"))
+write_csv(ck_sample_lineage, file.path(res_path, "04_neut_wilcox_sample_lineage.csv"))
+print(dplyr::filter(ck_sample_lineage, .data$p < 0.05) |>
+  dplyr::arrange(dplyr::desc(delta_aci_minus_ctrl)))
+```
+
+```{r message=FALSE, warning=FALSE}
+p_lolli_s <- plot_lollipop_delta(
+  ck_sample_lineage,
+  title = "Neut lineage (GMP + Pre-Neut + Neut), sample-level",
+  p_col = "p"
+)
+ggsave(file.path(res_path, "04_neut_lollipop_sample.pdf"), p_lolli_s, width = 12, height = 4.2, dpi = 600)
+p_lolli_s
+```
+
+```{r message=FALSE, warning=FALSE}
+p_lolli_c <- plot_lollipop_delta(
+  ck_cell_lineage,
+  title = "Neut lineage, cell-level (BH)",
+  p_col = "padj"
+)
+ggsave(file.path(res_path, "04_neut_lollipop_cell.pdf"), p_lolli_c, width = 12, height = 4.2, dpi = 600)
+p_lolli_c
+```
+
+### 6. 中性粒亚型：CTRL vs ACI
+
+```{r message=FALSE, warning=FALSE}
+ck_cell_sub <- add_fdr(cell_group_tests(dat_neut, ck, strata_col = "annot_sub")) |>
+  dplyr::mutate(annot_sub = factor(.data$stratum, levels = traj_levels))
+ck_med_sub <- sample_medians(dat_neut, ck, extra_group = "annot_sub")
+ck_sample_sub <- add_stars(sample_group_tests(ck_med_sub, ck, strata_col = "annot_sub")) |>
+  dplyr::mutate(annot_sub = factor(.data$stratum, levels = traj_levels))
+write_csv(ck_cell_sub, file.path(res_path, "05_neut_wilcox_cell_subtype.csv"))
+write_csv(ck_sample_sub, file.path(res_path, "05_neut_wilcox_sample_subtype.csv"))
+print(dplyr::filter(ck_sample_sub, .data$p < 0.05))
+```
+
+```{r message=FALSE, warning=FALSE}
+p_sub_s <- ggplot(
+  dplyr::mutate(ck_sample_sub, feature = factor(feature, levels = ck)),
+  aes(x = annot_sub, y = feature, fill = delta_aci_minus_ctrl)
+) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 2.2) +
+  scale_fill_activity(ck_sample_sub$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Subtype sample-level ACI − CTRL (Wilcoxon p)")
+ggsave(file.path(res_path, "05_neut_heatmap_sample_subtype.pdf"), p_sub_s, width = 8, height = 10, dpi = 600)
+p_sub_s
+```
+
+```{r message=FALSE, warning=FALSE}
+p_sub_c <- ggplot(
+  dplyr::mutate(ck_cell_sub, feature = factor(feature, levels = ck)),
+  aes(x = annot_sub, y = feature, fill = delta_aci_minus_ctrl)
+) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = star), size = 2.2) +
+  scale_fill_activity(ck_cell_sub$delta_aci_minus_ctrl) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL) +
+  ylab(NULL) +
+  ggtitle("Subtype cell-level ACI − CTRL (BH)")
+ggsave(file.path(res_path, "05_neut_heatmap_cell_subtype.pdf"), p_sub_c, width = 8, height = 10, dpi = 600)
+p_sub_c
+```
+
+```{r}
+sessionInfo()
+```
